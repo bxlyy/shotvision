@@ -2,8 +2,6 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-import UserSync from "./components/user-sync";
-
 import {
   ClerkProvider,
   SignInButton,
@@ -53,7 +51,6 @@ export default function RootLayout({
               <UserButton />
             </SignedIn>
           </header>
-          <UserSync /> {/*call user-sync component to add user to MongoDB*/}
           {children}
         </body>
       </html>
