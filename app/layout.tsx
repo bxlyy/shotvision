@@ -53,7 +53,7 @@ export default function RootLayout({
               <UserButton />
             </SignedIn>
           </header>
-          <UserSync />
+          <UserSync /> {/*call user-sync component to add user to MongoDB*/}
           {children}
         </body>
       </html>
