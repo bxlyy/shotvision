@@ -23,8 +23,6 @@ const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
-const _inter = Inter({ subsets: ["latin"] })
-const _jetbrainsMono = JetBrains_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
   title: "ShotVision - AI Tennis Swing Analysis",
@@ -60,36 +58,9 @@ export default function RootLayout({
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased`}
         >
-          <header className="flex justify-end items-center p-4 gap-4 h-16">
-            <SignedOut>
-              <SignInButton />
-              <SignUpButton>
-                <button className="bg-[#6c47ff] text-ceramic-white rounded-full font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 cursor-pointer">
-                  Sign Up
-                </button>
-              </SignUpButton>
-            </SignedOut>
-            <SignedIn>
-              <UserButton />
-            </SignedIn>
-          </header>
           {children}
         </body>
       </html>
     </ClerkProvider>
   );
-  
-  /* return (  <html lang="en">
-      <body
-        className={`${_inter.className} antialiased`}
-        style={{
-          "--font-sans": _inter.style.fontFamily,
-          "--font-mono": _jetbrainsMono.style.fontFamily,
-        }}
-      >
-        {children}
-        <Analytics />
-      </body>
-    </html>
-  ) */
 }
