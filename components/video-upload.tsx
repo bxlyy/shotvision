@@ -1,11 +1,45 @@
 "use client"
 
-import type React from "react"
-
-import { useState, useCallback } from "react"
+import React, { useState, useCallback } from "react"
 import { Upload, Video, FileVideo, X, Activity } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { clsx, type ClassValue } from "clsx"
+import { twMerge } from "tailwind-merge"
+
+// --- Utility Code (simulating @/lib/utils) ---
+function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs))
+}
+
+// --- UI Components (simulating @/components/ui/button) ---
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: "default" | "ghost" | "outline"
+  size?: "default" | "sm" | "lg" | "icon"
+}
+
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ className, variant = "default", size = "default", ...props }, ref) => {
+    return (
+      <button
+        ref={ref}
+        className={cn(
+          "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
+          variant === "default" && "bg-primary text-primary-foreground hover:bg-primary/90",
+          variant === "ghost" && "hover:bg-accent hover:text-accent-foreground",
+          variant === "outline" && "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
+          size === "default" && "h-10 px-4 py-2",
+          size === "sm" && "h-9 rounded-md px-3",
+          size === "lg" && "h-11 rounded-md px-8",
+          size === "icon" && "h-10 w-10",
+          className
+        )}
+        {...props}
+      />
+    )
+  }
+)
+Button.displayName = "Button"
+
+// --- Main Component ---
 
 export function VideoUpload() {
   const [file, setFile] = useState<File | null>(null)
@@ -43,32 +77,35 @@ export function VideoUpload() {
   }, [])
 
   const handleAnalyze = useCallback(() => {
-    // This would trigger the CV analysis in a real implementation
-    console.log("[v0] Analyzing video:", file?.name)
-    alert("Analysis would start here! (UI only for this iteration)")
+    console.log("Analyzing video:", file?.name)
+    // alert is generally discouraged in these previews, using console instead
   }, [file])
 
   return (
-    <div className="mx-auto w-full max-w-2xl">
+    <div className="h-full w-full">
       {!file ? (
         <div
           onDrop={handleDrop}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           className={cn(
-            "relative rounded-2xl border-2 border-dashed border-border bg-card transition-all",
-            isDragging && "border-primary bg-primary/5 scale-[1.02]",
+            // Added 'group' for hover effects on children
+            // Added hover:border-primary and hover:bg-primary/5 for "light up" effect
+            "group relative h-full rounded-2xl border-2 border-dashed border-border bg-card transition-all hover:border-primary hover:bg-primary/5",
+            isDragging && "scale-[1.02] border-primary bg-primary/5"
           )}
         >
           <label
             htmlFor="video-upload"
-            className="flex cursor-pointer flex-col items-center justify-center px-8 py-16 transition-colors hover:bg-muted/50"
+            className="flex h-full cursor-pointer flex-col items-center justify-center px-8 py-16 transition-colors"
           >
-            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10">
+            {/* Icon Container: Added transition and group-hover:scale-110 */}
+
+            <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 ring-4 ring-background transition-transform duration-300 group-hover:scale-110">
               {isDragging ? (
-                <FileVideo className="h-8 w-8 text-primary" />
+                <FileVideo className="h-8 w-8 text-primary transition-colors" />
               ) : (
-                <Upload className="h-8 w-8 text-primary" />
+                <Upload className="h-8 w-8 text-primary transition-colors" />
               )}
             </div>
 
@@ -80,16 +117,27 @@ export function VideoUpload() {
               Drag and drop or click to browse • MP4, MOV, AVI up to 500MB
             </p>
 
-            <Button type="button" size="lg">
+            {/* Button: Added opacity-0 by default and group-hover:opacity-100 */}
+            <Button 
+              type="button" 
+              size="lg" 
+              className="pointer-events-none opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+            >
               <Upload className="mr-2 h-4 w-4" />
               Choose video
             </Button>
           </label>
 
-          <input id="video-upload" type="file" accept="video/*" className="hidden" onChange={handleFileInput} />
+          <input 
+            id="video-upload" 
+            type="file" 
+            accept="video/*" 
+            className="hidden" 
+            onChange={handleFileInput} 
+          />
         </div>
       ) : (
-        <div className="rounded-2xl border border-border bg-card p-8">
+        <div className="flex h-full flex-col justify-center rounded-2xl border border-border bg-card p-8">
           <div className="mb-6 flex items-start justify-between">
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
@@ -117,6 +165,17 @@ export function VideoUpload() {
           </div>
         </div>
       )}
+    </div>
+  )
+}
+
+// --- Application Layout (for preview) ---
+export default function App() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background p-8">
+      <div className="w-full max-w-md">
+        <VideoUpload />
+      </div>
     </div>
   )
 }

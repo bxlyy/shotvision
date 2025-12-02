@@ -56,17 +56,6 @@ export default function LoginPage() {
               }
             }}
           />
-          
-          {/* Optional: Your custom footer if you hid Clerk's footer above 
-              Note: Clerk includes a "Don't have an account?" link by default. 
-              If you keep the 'footer: "hidden"' line above, use this: 
-          */}
-          <p className="mt-6 text-center text-sm text-muted-foreground">
-            {"Don't have an account? "}
-            <Link href="/signup" className="font-medium text-primary hover:underline">
-              Sign up
-            </Link>
-          </p>
         </div>
       </div>
     </div>
