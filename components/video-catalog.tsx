@@ -156,14 +156,24 @@ export function VideoCatalogSelector({
           </div>
 
           {currentVideo && (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setCurrentVideo(null)}
-              className="text-muted-foreground hover:text-destructive"
-            >
-              Clear
-            </Button>
+            <div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setCurrentVideo(null)}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                Clear
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => alert("Edit functionality coming soon!")}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                Edit Metadata
+              </Button>
+            </div>
           )}
         </div>
       </div>
