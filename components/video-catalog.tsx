@@ -98,6 +98,7 @@ export function VideoCatalogSelector() {
           </div>
           
           {currentVideo && (
+            <div>
             <Button 
               variant="ghost" 
               size="sm" 
@@ -106,6 +107,15 @@ export function VideoCatalogSelector() {
             >
               Clear
             </Button>
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              onClick={() => alert("Edit functionality coming soon!")}
+              className="text-muted-foreground hover:text-destructive"
+            >
+              Edit Metadata
+            </Button>
+            </div>
           )}
         </div>
       </div>
