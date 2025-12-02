@@ -1,10 +1,19 @@
-import { VideoUpload } from "@/components/video-upload";
+"use client";
+
+import { useState } from "react";
+import {
+  Play,
+  Activity,
+  Target,
+  Zap,
+  Video as VideoIcon, // Renamed, since VideoCatalogSelector now has 'type Video'
+} from "lucide-react";
+import { VideoCatalogSelector, type Video } from "@/components/video-catalog";
 import { RoundedVideo } from "@/components/video-player";
-import { VideoCatalogSelector } from "@/components/video-catalog";
+import { VideoUpload } from "@/components/video-upload";
 import { InteractiveCard } from "@/components/interactive-card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { Play, Activity, Target, Zap, Video } from "lucide-react";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import {
   CardContent,
@@ -12,7 +21,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import { Inter } from "next/font/google";
 
 function CalculationCard({
   title,
@@ -37,6 +45,8 @@ function CalculationCard({
 }
 
 export default function HomePage() {
+  const [activeVideo, setActiveVideo] = useState<Video | null>(null);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -76,12 +86,15 @@ export default function HomePage() {
             <VideoUpload />
           </div>
           <div className="row-span-2 col-start-2 row-start-1">
-            <VideoCatalogSelector />
+            <VideoCatalogSelector onVideoSelect={setActiveVideo} />
           </div>
+
           <RoundedVideo
-            src="/videoplayback.mp4"
+            src={activeVideo?.url || ""}
+            title={activeVideo?.title || "Select a video from catalog"}
             className="col-span-2 row-span-2 col-start-3 row-start-1"
           />
+
           <div className="row-start-3">
             <CalculationCard title="Phases" description="Card Description">
               <p>Calculations Here</p>
