@@ -1,52 +1,101 @@
-"use client"
+"use client";
 
-import type React from "react"
-
-import { useState, useCallback } from "react"
-import { Upload, Video, FileVideo, X, Activity } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import type React from "react";
+import { useState, useCallback } from "react";
+import {
+  Upload,
+  Video,
+  FileVideo,
+  X,
+  UploadCloud,
+  Loader2,
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 
 export function VideoUpload() {
-  const [file, setFile] = useState<File | null>(null)
-  const [isDragging, setIsDragging] = useState(false)
+  const [file, setFile] = useState<File | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setIsDragging(false)
-
-    const droppedFile = e.dataTransfer.files[0]
+    e.preventDefault();
+    setIsDragging(false);
+    const droppedFile = e.dataTransfer.files[0];
     if (droppedFile && droppedFile.type.startsWith("video/")) {
-      setFile(droppedFile)
+      setFile(droppedFile);
     }
-  }, [])
+  }, []);
 
   const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setIsDragging(true)
-  }, [])
+    e.preventDefault();
+    setIsDragging(true);
+  }, []);
 
   const handleDragLeave = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault()
-    setIsDragging(false)
-  }, [])
+    e.preventDefault();
+    setIsDragging(false);
+  }, []);
 
-  const handleFileInput = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const selectedFile = e.target.files?.[0]
-    if (selectedFile && selectedFile.type.startsWith("video/")) {
-      setFile(selectedFile)
-    }
-  }, [])
+  const handleFileInput = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const selectedFile = e.target.files?.[0];
+      if (selectedFile && selectedFile.type.startsWith("video/")) {
+        setFile(selectedFile);
+      }
+    },
+    []
+  );
 
   const handleRemove = useCallback(() => {
-    setFile(null)
-  }, [])
+    if (isUploading) return;
+    setFile(null);
+  }, [isUploading]);
 
-  const handleAnalyze = useCallback(() => {
-    // This would trigger the CV analysis in a real implementation
-    console.log("[v0] Analyzing video:", file?.name)
-    alert("Analysis would start here! (UI only for this iteration)")
-  }, [file])
+  const handleUpload = async () => {
+    if (!file) return;
+    setIsUploading(true);
+
+    try {
+      // Get permission (uses API Route (no S3 SDK needed here))
+      const uploadRes = await fetch(
+        `/api/upload-url?fileType=${encodeURIComponent(file.type)}`
+      );
+      if (!uploadRes.ok) throw new Error("Failed to get upload URL");
+
+      const { uploadUrl, key } = await uploadRes.json();
+
+      // Upload to Backblaze (uses standard browser fetch)
+      const b2Response = await fetch(uploadUrl, {
+        method: "PUT",
+        headers: {
+          "Content-Type": file.type,
+        },
+        body: file,
+      });
+
+      if (!b2Response.ok) throw new Error("Failed to upload to storage");
+
+      // Save to database
+      const saveRes = await fetch("/api/videos", {
+        method: "POST",
+        body: JSON.stringify({
+          key: key,
+          title: file.name,
+        }),
+      });
+
+      if (!saveRes.ok) throw new Error("Failed to save video metadata");
+
+      alert("Success! Video uploaded.");
+      setFile(null);
+    } catch (error) {
+      console.error(error);
+      alert("Upload failed. Check console for details.");
+    } finally {
+      setIsUploading(false);
+    }
+  };
 
   return (
     <div className="mx-auto w-full max-w-2xl">
@@ -57,7 +106,7 @@ export function VideoUpload() {
           onDragLeave={handleDragLeave}
           className={cn(
             "relative rounded-2xl border-2 border-dashed border-border bg-card transition-all",
-            isDragging && "border-primary bg-primary/5 scale-[1.02]",
+            isDragging && "border-primary bg-primary/5 scale-[1.02]"
           )}
         >
           <label
@@ -71,22 +120,24 @@ export function VideoUpload() {
                 <Upload className="h-8 w-8 text-primary" />
               )}
             </div>
-
             <h3 className="mb-2 text-xl font-semibold text-balance">
               {isDragging ? "Drop your video here" : "Upload your tennis video"}
             </h3>
-
             <p className="mb-6 text-sm text-muted-foreground text-pretty">
               Drag and drop or click to browse • MP4, MOV, AVI up to 500MB
             </p>
-
             <Button type="button" size="lg">
               <Upload className="mr-2 h-4 w-4" />
               Choose video
             </Button>
           </label>
-
-          <input id="video-upload" type="file" accept="video/*" className="hidden" onChange={handleFileInput} />
+          <input
+            id="video-upload"
+            type="file"
+            accept="video/*"
+            className="hidden"
+            onChange={handleFileInput}
+          />
         </div>
       ) : (
         <div className="rounded-2xl border border-border bg-card p-8">
@@ -97,26 +148,50 @@ export function VideoUpload() {
               </div>
               <div className="flex-1">
                 <h4 className="mb-1 font-semibold text-balance">{file.name}</h4>
-                <p className="text-sm text-muted-foreground">{(file.size / (1024 * 1024)).toFixed(2)} MB</p>
+                <p className="text-sm text-muted-foreground">
+                  {(file.size / (1024 * 1024)).toFixed(2)} MB
+                </p>
               </div>
             </div>
-            <Button variant="ghost" size="icon" onClick={handleRemove} className="h-8 w-8">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleRemove}
+              className="h-8 w-8"
+              disabled={isUploading}
+            >
               <X className="h-4 w-4" />
             </Button>
           </div>
 
           <div className="space-y-3">
-            <Button onClick={handleAnalyze} className="w-full" size="lg">
-              <Activity className="mr-2 h-4 w-4" />
-              Analyze swing
+            <Button
+              onClick={handleUpload}
+              className="w-full"
+              size="lg"
+              disabled={isUploading}
+            >
+              {isUploading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Uploading...
+                </>
+              ) : (
+                <>
+                  <UploadCloud className="mr-2 h-4 w-4" />
+                  Upload Video
+                </>
+              )}
             </Button>
 
             <p className="text-center text-xs text-muted-foreground text-pretty">
-              Analysis typically takes 30-60 seconds depending on video length
+              {isUploading
+                ? "Please wait while we send your video to the cloud..."
+                : "Ready to upload"}
             </p>
           </div>
         </div>
       )}
     </div>
-  )
+  );
 }
