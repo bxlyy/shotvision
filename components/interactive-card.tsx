@@ -10,7 +10,7 @@ const InteractiveCard = React.forwardRef<
     ref={ref}
     className={cn(
       // The animation styles are now isolated here
-      "transition-all duration-300 ease-in-out hover:-rotate-1 hover:scale-[1.02] hover:shadow-lg",
+      "transition-all duration-300 ease-in-out hover:scale-[1.02] hover:shadow-lg",
       className
     )}
     {...props}

@@ -84,34 +84,37 @@ export default function HomePage() {
 
       {/* Signed In - Dashboard*/}
       <SignedIn>
-        <div className="m-6 grid grid-cols-4 gap-4">
-          <div className="row-span-2 col-start-1 row-start-1">
+        <div className="m-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div className="md:row-span-2 md:col-start-1 md:row-start-1">
             <VideoUpload onUploadSuccess={handleVideoChange} />
           </div>
-          <div className="row-span-2 col-start-2 row-start-1">
-            <VideoCatalogSelector 
-              selectedVideo={activeVideo} 
-              onVideoSelect={handleVideoChange} 
+
+          <div className="md:row-span-2 md:col-start-2 md:row-start-1">
+            <VideoCatalogSelector
+              selectedVideo={activeVideo}
+              onVideoSelect={handleVideoChange}
             />
           </div>
 
           <RoundedVideo
             src={activeVideo?.url || ""}
             title={activeVideo?.title || "Select a video from catalog"}
-            className="col-span-2 row-span-2 col-start-3 row-start-1"
+            className="md:col-span-2 md:row-span-2 md:col-start-3 md:row-start-1"
           />
 
-          <div className="row-start-3">
+          <div className="md:row-start-3">
             <CalculationCard title="Phases" description="Card Description">
               <p>Calculations Here</p>
             </CalculationCard>
           </div>
-          <div className="row-start-3">
+
+          <div className="md:row-start-3">
             <CalculationCard title="Engine" description="Card Description">
               <p>Calculations Here</p>
             </CalculationCard>
           </div>
-          <div className="row-start-3">
+
+          <div className="md:row-start-3">
             <CalculationCard
               title="Transmission"
               description="Card Description"
@@ -119,12 +122,14 @@ export default function HomePage() {
               <p>Calculations Here</p>
             </CalculationCard>
           </div>
-          <div className="row-start-3">
+
+          <div className="md:row-start-3">
             <CalculationCard title="Driver" description="Card Description">
               <p>Calculations Here</p>
             </CalculationCard>
           </div>
-          <div className="col-span-4">
+
+          <div className="md:col-span-4">
             <CalculationCard title="Overall" description="Card Description">
               <p>Calculations Here</p>
             </CalculationCard>

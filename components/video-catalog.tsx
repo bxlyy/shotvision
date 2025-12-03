@@ -90,15 +90,15 @@ export function VideoCatalogSelector({
     <div className="flex h-full w-full flex-col gap-6">
       {/* "Currently Viewing" Status Card */}
       <div className="shrink-0 rounded-2xl border border-border bg-card p-6 shadow-sm transition-all">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
+        <div className="flex items-center justify-between gap-4"> 
+          <div className="space-y-1 flex-1 min-w-0">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Currently viewing
             </h4>
             <div className="flex items-center gap-3">
               <div
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
+                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors", // Added shrink-0 to icon
                   selectedVideo
                     ? "bg-primary/10 text-primary"
                     : "bg-muted text-muted-foreground"
@@ -108,7 +108,7 @@ export function VideoCatalogSelector({
               </div>
               <span
                 className={cn(
-                  "text-lg font-medium truncate max-w-[200px] sm:max-w-md",
+                  "text-lg font-medium truncate block",
                   selectedVideo
                     ? "text-foreground"
                     : "text-muted-foreground italic"
@@ -120,12 +120,12 @@ export function VideoCatalogSelector({
           </div>
 
           {selectedVideo && (
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 shrink-0">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleClearVideo}
-                className="text-muted-foreground hover:text-destructive"
+                className="h-8 justify-end px-2 text-muted-foreground hover:text-destructive"
               >
                 Clear
               </Button>
@@ -133,9 +133,9 @@ export function VideoCatalogSelector({
                 variant="ghost"
                 size="sm"
                 onClick={() => alert("Edit functionality coming soon!")}
-                className="text-muted-foreground hover:text-destructive"
+                className="h-8 justify-end px-2 text-muted-foreground hover:text-destructive"
               >
-                Edit Metadata
+                Edit
               </Button>
             </div>
           )}
