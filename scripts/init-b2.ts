@@ -1,10 +1,14 @@
+// Run this file manually with 'npx tsx scripts/init-b2.ts'
 // Created this to correct B2 settings
 
-import { b2 } from "@/lib/b2";
 import { PutBucketCorsCommand } from "@aws-sdk/client-s3";
-import { NextResponse } from "next/server";
+import { config } from "dotenv";
 
-export async function GET() {
+config({ path: ".env.local" });
+
+async function main() {
+  const { b2 } = await import("@/lib/b2");
+
   try {
     console.log(
       "Attempting to update CORS rules for bucket:",
@@ -33,12 +37,10 @@ export async function GET() {
 
     await b2.send(command);
 
-    return NextResponse.json({
-      success: true,
-      message: "CORS Rules Updated Successfully!",
-    });
+    console.log("CORS Rules Updated Successfully!");
   } catch (error: any) {
     console.error("Failed to update CORS:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
   }
 }
+
+main();
