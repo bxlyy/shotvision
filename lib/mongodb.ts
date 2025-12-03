@@ -1,4 +1,4 @@
-// root/lib/mongodb.ts
+// src/lib/mongodb.ts
 import { MongoClient } from "mongodb";
 
 const uri: string = process.env.MONGODB_URI!;
@@ -23,5 +23,17 @@ if (process.env.NODE_ENV === "development") {
   client = new MongoClient(uri, options);
   clientPromise = client.connect();
 }
+
+// Added for debugging, since sometimes connection fails
+// Pretty sure it fails when connecting on UCLA_WEB
+clientPromise
+  .then((client) => {
+    console.log("Successfully connected to MongoDB");
+    return client;
+  })
+  .catch((err) => {
+    console.error("MongoDB Connection Error:", err);
+    throw err;
+  });
 
 export default clientPromise;
