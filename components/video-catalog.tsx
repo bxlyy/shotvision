@@ -34,6 +34,7 @@ export function VideoCatalogSelector({
   onVideoSelect,
 }: VideoCatalogSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
 
   // State for data fetching
   const [videos, setVideos] = useState<Video[]>([]);
@@ -90,15 +91,15 @@ export function VideoCatalogSelector({
     <div className="flex h-full w-full flex-col gap-6">
       {/* "Currently Viewing" Status Card */}
       <div className="shrink-0 rounded-2xl border border-border bg-card p-6 shadow-sm transition-all">
-        <div className="flex items-center justify-between">
-          <div className="space-y-1">
+        <div className="flex items-center justify-between gap-4"> 
+          <div className="space-y-1 flex-1 min-w-0">
             <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Currently viewing
             </h4>
             <div className="flex items-center gap-3">
               <div
                 className={cn(
-                  "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
+                  "flex h-8 w-8 shrink-0 items-center justify-center rounded-full transition-colors", // Added shrink-0 to icon
                   selectedVideo
                     ? "bg-primary/10 text-primary"
                     : "bg-muted text-muted-foreground"
@@ -108,7 +109,7 @@ export function VideoCatalogSelector({
               </div>
               <span
                 className={cn(
-                  "text-lg font-medium truncate max-w-[200px] sm:max-w-md",
+                  "text-lg font-medium truncate block",
                   selectedVideo
                     ? "text-foreground"
                     : "text-muted-foreground italic"
@@ -120,27 +121,66 @@ export function VideoCatalogSelector({
           </div>
 
           {selectedVideo && (
-            <div className="flex gap-2">
+            <div className="flex flex-col gap-2 shrink-0">
               <Button
                 variant="ghost"
                 size="sm"
                 onClick={handleClearVideo}
-                className="text-muted-foreground hover:text-destructive"
+                className="h-8 justify-end px-2 text-muted-foreground hover:text-destructive"
               >
                 Clear
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => alert("Edit functionality coming soon!")}
-                className="text-muted-foreground hover:text-destructive"
+                onClick={() => setIsEditing(true)}
+                className="h-8 justify-end px-2 text-muted-foreground hover:text-destructive"
               >
-                Edit Metadata
+                Edit
               </Button>
             </div>
           )}
         </div>
       </div>
+
+      {/* Edit Video Details Modal */}
+      {isEditing && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 p-4 backdrop-blur-sm animate-in fade-in duration-200">
+          <div
+            className="relative flex h-[600px] w-full max-w-3xl flex-col rounded-2xl bg-card shadow-2xl animate-in zoom-in-95 duration-200 border border-border"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-border px-6 py-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                  <LayoutGrid className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-foreground">
+                    Edit Video Details
+                  </h2>
+                  <p className="text-sm text-muted-foreground">
+                    Modify the metadata for your selected video
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setIsEditing(false)}
+              >
+                <X className="h-5 w-5 text-muted-foreground" />
+              </Button>
+            </div>
+
+            {/* Modal Content */}
+            <div className="flex-1 overflow-auto bg-muted/30 p-6">
+              {/* Content for editing video details goes here */}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Catalog Trigger Area */}
       <div
