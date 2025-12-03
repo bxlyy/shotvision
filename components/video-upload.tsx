@@ -176,13 +176,15 @@ export function VideoUpload({ onUploadSuccess }: VideoUploadProps) {
         </div>
       ) : (
         <div className="flex h-full flex-col justify-center rounded-2xl border border-border bg-card p-8">
-          <div className="mb-6 flex items-start justify-between">
-            <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+          <div className="mb-6 flex items-start justify-between gap-4">
+            <div className="flex items-start gap-4 min-w-0 flex-1">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                 <VideoIcon className="h-6 w-6 text-primary" />
               </div>
-              <div className="flex-1">
-                <h4 className="mb-1 font-semibold text-balance">{file.name}</h4>
+              <div className="flex-1 min-w-0">
+                <h4 className="mb-1 font-semibold truncate" title={file.name}>
+                  {file.name}
+                </h4>
                 <p className="text-sm text-muted-foreground">
                   {(file.size / (1024 * 1024)).toFixed(2)} MB
                 </p>
@@ -192,7 +194,7 @@ export function VideoUpload({ onUploadSuccess }: VideoUploadProps) {
               variant="ghost"
               size="icon"
               onClick={handleRemove}
-              className="h-8 w-8"
+              className="h-8 w-8 shrink-0"
               disabled={isUploading}
             >
               <X className="h-4 w-4" />
