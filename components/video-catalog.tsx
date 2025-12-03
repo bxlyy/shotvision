@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import {
   Library,
   PlayCircle,
@@ -14,9 +14,13 @@ import {
   Pencil,
   Trash2,
   AlertTriangle,
+  ListFilter
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+
+
 
 // --- Types ---
 export interface Video {
@@ -39,6 +43,8 @@ export function VideoCatalogSelector({
 }: VideoCatalogSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [filter, setFilter] = useState<"name-asc" | "name-desc" | "date-asc" | "date-desc">("name-asc");
+  const [search, setSearch] = useState("");
 
   // State for data fetching
   const [videos, setVideos] = useState<Video[]>([]);
@@ -129,6 +135,12 @@ export function VideoCatalogSelector({
       setIsDeleting(false);
     }
   };
+  const changeFilter = () => {
+    if (filter === "name-asc") setFilter("name-desc");
+    else if (filter === "name-desc") setFilter("date-asc");
+    else if (filter === "date-asc") setFilter("date-desc");
+    else if (filter === "date-desc") setFilter("name-asc");
+  }
 
   // Fetch videos only when the modal is opened
   useEffect(() => {
@@ -157,6 +169,30 @@ export function VideoCatalogSelector({
       fetchVideos();
     }
   }, [isOpen]);
+
+  const sortedVideos = useMemo(() => {
+    if (videos.length === 0) return []; 
+    return [...videos].sort((a, b) => {
+      if (filter === "name-asc") {
+        return a.title.localeCompare(b.title);
+      } 
+      if (filter === "name-desc") {
+        return b.title.localeCompare(a.title);
+      } 
+      if (filter === "date-asc") {
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      }
+      if (filter === "date-desc") {
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      }
+      return 0;
+    });
+  }, [videos, filter]);
+
+  const filteredVideos = useMemo(() => {
+    if (search.trim() === "") return sortedVideos;
+    return sortedVideos.filter(video => video.title.toLowerCase().includes(search.toLowerCase()));
+  }, [search, sortedVideos]);
 
   // Helper to format MongoDB dates
   const formatDate = (dateString: string) => {
@@ -446,13 +482,23 @@ export function VideoCatalogSelector({
                   </p>
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsOpen(false)}
-              >
-                <X className="h-5 w-5 text-muted-foreground" />
-              </Button>
+              <div className="flex gap-2">
+                <Input className="flex" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search videos..." />
+                <Button
+                    variant="ghost"
+                    onClick={() => changeFilter()}
+                >
+                    <ListFilter className="h-5 w-5" />
+                    <p>{filter === "name-asc" ? "A-Z" : filter === "name-desc" ? "Z-A" : filter === "date-asc" ? "Oldest" : "Newest"}</p>
+                </Button>
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setIsOpen(false)}
+                >
+                    <X className="h-5 w-5 text-muted-foreground" />
+                </Button>
+              </div>
             </div>
 
             {/* Modal Content */}
@@ -491,7 +537,7 @@ export function VideoCatalogSelector({
               {/* Video list */}
               {!isLoading && !error && videos.length > 0 && (
                 <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                  {videos.map((video) => (
+                  {filteredVideos.map((video) => (
                     <button
                       key={video._id}
                       onClick={() => handleSelectVideo(video)}
