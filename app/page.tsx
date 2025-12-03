@@ -10,38 +10,10 @@ import {
 import { VideoCatalogSelector, type Video } from "@/components/video-catalog";
 import { RoundedVideo } from "@/components/video-player";
 import { VideoUpload } from "@/components/video-upload";
-import { InteractiveCard } from "@/components/interactive-card";
+import { CalculationCard } from "@/components/calculation-card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
-import {
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-
-function CalculationCard({
-  title,
-  description,
-  children,
-}: {
-  title: string;
-  description: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <InteractiveCard className="bg-blue-500/70">
-      <CardHeader>
-        <CardTitle className="text-lg">{title}</CardTitle>
-        <CardDescription className="text-gray-300">
-          {description}
-        </CardDescription>
-      </CardHeader>
-      <CardContent>{children}</CardContent>
-    </InteractiveCard>
-  );
-}
 
 export default function HomePage() {
   const [activeVideo, setActiveVideo] = useState<Video | null>(null);
