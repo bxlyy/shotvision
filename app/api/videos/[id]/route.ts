@@ -3,6 +3,7 @@ import { auth } from "@clerk/nextjs/server";
 import { ObjectId } from "mongodb";
 import { NextResponse } from "next/server";
 import { S3Client, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { validateAppSource } from "@/lib/custom-header";
 
 const s3Client = new S3Client({
   region: "us-east-005",
@@ -23,8 +24,7 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const sourceHeader = req.headers.get("x-app-source");
-    if (sourceHeader !== "shotvision-web") {
+    if (!validateAppSource(req)) {
       return NextResponse.json(
         { error: "Forbidden: Direct access denied" },
         { status: 403 }
@@ -77,8 +77,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const sourceHeader = req.headers.get("x-app-source");
-    if (sourceHeader !== "shotvision-web") {
+    if (!validateAppSource(req)) {
       return NextResponse.json(
         { error: "Forbidden: Direct access denied" },
         { status: 403 }
