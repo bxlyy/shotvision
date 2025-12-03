@@ -4,6 +4,7 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
+import { validateAppSource } from "@/lib/custom-header";
 
 export async function GET(req: Request) {
   const { userId } = await auth();
@@ -11,8 +12,7 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const sourceHeader = req.headers.get("x-app-source");
-  if (sourceHeader !== "shotvision-web") {
+  if (!validateAppSource(req)) {
     return NextResponse.json(
       { error: "Forbidden: Direct access denied" },
       { status: 403 }
@@ -58,8 +58,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const sourceHeader = req.headers.get("x-app-source");
-    if (sourceHeader !== "shotvision-web") {
+    if (!validateAppSource(req)) {
       return NextResponse.json(
         { error: "Forbidden: Direct access denied" },
         { status: 403 }

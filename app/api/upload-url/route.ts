@@ -3,6 +3,7 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { auth } from "@clerk/nextjs/server";
 import { NextRequest, NextResponse } from "next/server";
+import { validateAppSource } from "@/lib/custom-header";
 
 export async function GET(req: NextRequest) {
   // Authenticate user
@@ -11,8 +12,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const sourceHeader = req.headers.get("x-app-source");
-  if (sourceHeader !== "shotvision-web") {
+  if (!validateAppSource(req)) {
     return NextResponse.json(
       { error: "Forbidden: Direct access denied" },
       { status: 403 }
