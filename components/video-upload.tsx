@@ -63,7 +63,10 @@ export function VideoUpload({ onUploadSuccess }: VideoUploadProps) {
     try {
       // 1. Get permission (uses API Route)
       const uploadRes = await fetch(
-        `/api/upload-url?fileType=${encodeURIComponent(file.type)}`
+        `/api/upload-url?fileType=${encodeURIComponent(file.type)}`,
+        {
+          headers: { "x-app-source": "shotvision-web" },
+        }
       );
       if (!uploadRes.ok) throw new Error("Failed to get upload URL");
 
@@ -83,6 +86,10 @@ export function VideoUpload({ onUploadSuccess }: VideoUploadProps) {
       // 3. Save to database
       const saveRes = await fetch("/api/videos", {
         method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-app-source": "shotvision-web",
+        },
         body: JSON.stringify({
           key: key,
           title: file.name,
@@ -99,19 +106,18 @@ export function VideoUpload({ onUploadSuccess }: VideoUploadProps) {
         _id: serverVideoData._id || serverVideoData.id || "temp-id",
         title: file.name,
         key: key,
-        url: URL.createObjectURL(file), 
+        url: URL.createObjectURL(file),
         createdAt: new Date().toISOString(),
-        owner: "me", 
+        owner: "me",
         ...serverVideoData, // Merge any other real data from server
       };
-      
+
       if (onUploadSuccess) {
         onUploadSuccess(optimisticVideo);
       }
 
       setFile(null);
       // Removed alert for a smoother UI flow
-      
     } catch (error) {
       console.error(error);
       alert("Upload failed. Check console for details.");

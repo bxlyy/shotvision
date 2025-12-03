@@ -5,10 +5,18 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { auth } from "@clerk/nextjs/server";
 import { NextResponse } from "next/server";
 
-export async function GET() {
+export async function GET(req: Request) {
   const { userId } = await auth();
   if (!userId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const sourceHeader = req.headers.get("x-app-source");
+  if (sourceHeader !== "shotvision-web") {
+    return NextResponse.json(
+      { error: "Forbidden: Direct access denied" },
+      { status: 403 }
+    );
   }
 
   const client = await clientPromise;
@@ -48,6 +56,14 @@ export async function POST(req: Request) {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const sourceHeader = req.headers.get("x-app-source");
+    if (sourceHeader !== "shotvision-web") {
+      return NextResponse.json(
+        { error: "Forbidden: Direct access denied" },
+        { status: 403 }
+      );
     }
 
     // Get the data sent from the frontend

@@ -14,13 +14,11 @@ import {
   Pencil,
   Trash2,
   AlertTriangle,
-  ListFilter
+  ListFilter,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-
-
 
 // --- Types ---
 export interface Video {
@@ -43,7 +41,9 @@ export function VideoCatalogSelector({
 }: VideoCatalogSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [filter, setFilter] = useState<"name-asc" | "name-desc" | "date-asc" | "date-desc">("name-asc");
+  const [filter, setFilter] = useState<
+    "name-asc" | "name-desc" | "date-asc" | "date-desc"
+  >("name-asc");
   const [search, setSearch] = useState("");
 
   // State for data fetching
@@ -84,6 +84,7 @@ export function VideoCatalogSelector({
         method: "PATCH",
         headers: {
           "Content-Type": "application/json",
+          "x-app-source": "shotvision-web",
         },
         body: JSON.stringify({ title: editTitle }),
       });
@@ -116,6 +117,9 @@ export function VideoCatalogSelector({
     try {
       const response = await fetch(`/api/videos/${selectedVideo._id}`, {
         method: "DELETE",
+        headers: {
+          "x-app-source": "shotvision-web",
+        },
       });
 
       if (!response.ok) throw new Error("Failed to delete");
@@ -140,7 +144,7 @@ export function VideoCatalogSelector({
     else if (filter === "name-desc") setFilter("date-asc");
     else if (filter === "date-asc") setFilter("date-desc");
     else if (filter === "date-desc") setFilter("name-asc");
-  }
+  };
 
   // Fetch videos only when the modal is opened
   useEffect(() => {
@@ -149,7 +153,11 @@ export function VideoCatalogSelector({
         setIsLoading(true);
         setError(null);
         try {
-          const response = await fetch("/api/videos");
+          const response = await fetch("/api/videos", {
+            headers: {
+              "x-app-source": "shotvision-web",
+            },
+          });
 
           if (!response.ok) {
             throw new Error("Failed to fetch videos");
@@ -171,19 +179,23 @@ export function VideoCatalogSelector({
   }, [isOpen]);
 
   const sortedVideos = useMemo(() => {
-    if (videos.length === 0) return []; 
+    if (videos.length === 0) return [];
     return [...videos].sort((a, b) => {
       if (filter === "name-asc") {
         return a.title.localeCompare(b.title);
-      } 
+      }
       if (filter === "name-desc") {
         return b.title.localeCompare(a.title);
-      } 
+      }
       if (filter === "date-asc") {
-        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+        return (
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
       }
       if (filter === "date-desc") {
-        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+        return (
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
       }
       return 0;
     });
@@ -191,7 +203,9 @@ export function VideoCatalogSelector({
 
   const filteredVideos = useMemo(() => {
     if (search.trim() === "") return sortedVideos;
-    return sortedVideos.filter(video => video.title.toLowerCase().includes(search.toLowerCase()));
+    return sortedVideos.filter((video) =>
+      video.title.toLowerCase().includes(search.toLowerCase())
+    );
   }, [search, sortedVideos]);
 
   // Helper to format MongoDB dates
@@ -483,20 +497,30 @@ export function VideoCatalogSelector({
                 </div>
               </div>
               <div className="flex gap-2">
-                <Input className="flex" value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search videos..." />
-                <Button
-                    variant="ghost"
-                    onClick={() => changeFilter()}
-                >
-                    <ListFilter className="h-5 w-5" />
-                    <p>{filter === "name-asc" ? "A-Z" : filter === "name-desc" ? "Z-A" : filter === "date-asc" ? "Oldest" : "Newest"}</p>
+                <Input
+                  className="flex"
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search videos..."
+                />
+                <Button variant="ghost" onClick={() => changeFilter()}>
+                  <ListFilter className="h-5 w-5" />
+                  <p>
+                    {filter === "name-asc"
+                      ? "A-Z"
+                      : filter === "name-desc"
+                      ? "Z-A"
+                      : filter === "date-asc"
+                      ? "Oldest"
+                      : "Newest"}
+                  </p>
                 </Button>
                 <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => setIsOpen(false)}
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setIsOpen(false)}
                 >
-                    <X className="h-5 w-5 text-muted-foreground" />
+                  <X className="h-5 w-5 text-muted-foreground" />
                 </Button>
               </div>
             </div>
