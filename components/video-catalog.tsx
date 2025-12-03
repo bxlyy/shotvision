@@ -8,16 +8,11 @@ import {
   Film,
   ChevronRight,
   LayoutGrid,
-  Loader2, // Added for loading state
-  AlertCircle, // Added for error state
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
-import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
-
-// --- Utility Code (simulating @/lib/utils) ---
-function cn(...inputs: ClassValue[]) {
-  return twMerge(clsx(inputs));
-}
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 // --- Types ---
 export interface Video {
@@ -30,49 +25,15 @@ export interface Video {
 }
 
 interface VideoCatalogSelectorProps {
-  onVideoSelect: (video: Video) => void;
+  selectedVideo: Video | null;
+  onVideoSelect: (video: Video | null) => void;
 }
-
-// --- UI Components (simulating @/components/ui/button) ---
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "default" | "ghost" | "outline";
-  size?: "default" | "sm" | "lg" | "icon";
-}
-
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "default", size = "default", ...props }, ref) => {
-    return (
-      <button
-        ref={ref}
-        className={cn(
-          "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-          variant === "default" &&
-            "bg-primary text-primary-foreground hover:bg-primary/90",
-          variant === "ghost" && "hover:bg-accent hover:text-accent-foreground",
-          variant === "outline" &&
-            "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-          size === "default" && "h-10 px-4 py-2",
-          size === "sm" && "h-9 rounded-md px-3",
-          size === "lg" && "h-11 rounded-md px-8",
-          size === "icon" && "h-10 w-10",
-          className
-        )}
-        {...props}
-      />
-    );
-  }
-);
-Button.displayName = "Button";
-
-// --- Main Component ---
 
 export function VideoCatalogSelector({
+  selectedVideo,
   onVideoSelect,
 }: VideoCatalogSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
-
-  // State for currently selected video
-  const [currentVideo, setCurrentVideo] = useState<Video | null>(null);
 
   // State for data fetching
   const [videos, setVideos] = useState<Video[]>([]);
@@ -80,10 +41,12 @@ export function VideoCatalogSelector({
   const [error, setError] = useState<string | null>(null);
 
   const handleSelectVideo = (video: Video) => {
-    setCurrentVideo(video);
-    setIsOpen(false);
-
     onVideoSelect(video);
+    setIsOpen(false);
+  };
+
+  const handleClearVideo = () => {
+    onVideoSelect(null);
   };
 
   // Fetch videos only when the modal is opened
@@ -100,7 +63,8 @@ export function VideoCatalogSelector({
           }
 
           const data = await response.json();
-          setVideos(data.videos);
+          // Adjust 'data.videos' based on your actual API response structure
+          setVideos(data.videos || data);
         } catch (err) {
           console.error("Error loading videos:", err);
           setError("Could not load your video library.");
@@ -135,7 +99,7 @@ export function VideoCatalogSelector({
               <div
                 className={cn(
                   "flex h-8 w-8 items-center justify-center rounded-full transition-colors",
-                  currentVideo
+                  selectedVideo
                     ? "bg-primary/10 text-primary"
                     : "bg-muted text-muted-foreground"
                 )}
@@ -145,34 +109,34 @@ export function VideoCatalogSelector({
               <span
                 className={cn(
                   "text-lg font-medium truncate max-w-[200px] sm:max-w-md",
-                  currentVideo
+                  selectedVideo
                     ? "text-foreground"
                     : "text-muted-foreground italic"
                 )}
               >
-                {currentVideo ? currentVideo.title : "None"}
+                {selectedVideo ? selectedVideo.title : "None"}
               </span>
             </div>
           </div>
 
-          {currentVideo && (
-            <div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => setCurrentVideo(null)}
-              className="text-muted-foreground hover:text-destructive"
-            >
-              Clear
-            </Button>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={() => alert("Edit functionality coming soon!")}
-              className="text-muted-foreground hover:text-destructive"
-            >
-              Edit Metadata
-            </Button>
+          {selectedVideo && (
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleClearVideo}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                Clear
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => alert("Edit functionality coming soon!")}
+                className="text-muted-foreground hover:text-destructive"
+              >
+                Edit Metadata
+              </Button>
             </div>
           )}
         </div>
@@ -182,8 +146,6 @@ export function VideoCatalogSelector({
       <div
         onClick={() => setIsOpen(true)}
         className={cn(
-          // FIX 2: Added 'flex-1' to make this fill remaining height
-          // Added 'flex flex-col justify-center' to center content vertically within that new height
           "flex-1 flex flex-col justify-center",
           "group relative cursor-pointer overflow-hidden rounded-2xl border-2 border-dashed border-border bg-card p-10 text-center transition-all hover:border-primary hover:bg-primary/5"
         )}
@@ -285,7 +247,6 @@ export function VideoCatalogSelector({
                       className="group flex flex-col items-start gap-3 rounded-xl border border-border bg-card p-4 text-left transition-all hover:border-primary/50 hover:shadow-md"
                     >
                       <div className="relative flex aspect-video w-full items-center justify-center overflow-hidden rounded-lg bg-muted">
-                        {/* Thumbnail placeholer, maybe replace with <img src={video.thumbnail} /> later? */}
                         <Film className="h-8 w-8 text-muted-foreground transition-transform group-hover:scale-110" />
 
                         {/* "PLAY" Overlay on hover */}

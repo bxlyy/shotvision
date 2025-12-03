@@ -6,7 +6,6 @@ import {
   Activity,
   Target,
   Zap,
-  Video as VideoIcon, // Renamed, since VideoCatalogSelector now has 'type Video'
 } from "lucide-react";
 import { VideoCatalogSelector, type Video } from "@/components/video-catalog";
 import { RoundedVideo } from "@/components/video-player";
@@ -47,6 +46,10 @@ function CalculationCard({
 export default function HomePage() {
   const [activeVideo, setActiveVideo] = useState<Video | null>(null);
 
+  const handleVideoChange = (video: Video | null) => {
+    setActiveVideo(video);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -83,10 +86,13 @@ export default function HomePage() {
       <SignedIn>
         <div className="m-6 grid grid-cols-4 gap-4">
           <div className="row-span-2 col-start-1 row-start-1">
-            <VideoUpload />
+            <VideoUpload onUploadSuccess={handleVideoChange} />
           </div>
           <div className="row-span-2 col-start-2 row-start-1">
-            <VideoCatalogSelector onVideoSelect={setActiveVideo} />
+            <VideoCatalogSelector 
+              selectedVideo={activeVideo} 
+              onVideoSelect={handleVideoChange} 
+            />
           </div>
 
           <RoundedVideo

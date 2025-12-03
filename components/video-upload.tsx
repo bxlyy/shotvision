@@ -3,47 +3,21 @@
 import React, { useState, useCallback } from "react";
 import {
   Upload,
-  Video,
+  Video as VideoIcon,
   FileVideo,
   X,
   UploadCloud,
   Loader2,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import type { Video } from "@/components/video-catalog";
 
-// --- UI Components (simulating @/components/ui/button) ---
-interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "default" | "ghost" | "outline";
-  size?: "default" | "sm" | "lg" | "icon";
+interface VideoUploadProps {
+  onUploadSuccess?: (video: Video) => void;
 }
 
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "default", size = "default", ...props }, ref) => {
-    return (
-      <button
-        ref={ref}
-        className={cn(
-          "inline-flex items-center justify-center rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50",
-          variant === "default" &&
-            "bg-primary text-primary-foreground hover:bg-primary/90",
-          variant === "ghost" && "hover:bg-accent hover:text-accent-foreground",
-          variant === "outline" &&
-            "border border-input bg-background hover:bg-accent hover:text-accent-foreground",
-          size === "default" && "h-10 px-4 py-2",
-          size === "sm" && "h-9 rounded-md px-3",
-          size === "lg" && "h-11 rounded-md px-8",
-          size === "icon" && "h-10 w-10",
-          className
-        )}
-        {...props}
-      />
-    );
-  }
-);
-Button.displayName = "Button";
-
-// --- Main Component ---
-export function VideoUpload() {
+export function VideoUpload({ onUploadSuccess }: VideoUploadProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -87,7 +61,7 @@ export function VideoUpload() {
     setIsUploading(true);
 
     try {
-      // Get permission (uses API Route (no S3 SDK needed here))
+      // 1. Get permission (uses API Route)
       const uploadRes = await fetch(
         `/api/upload-url?fileType=${encodeURIComponent(file.type)}`
       );
@@ -95,7 +69,7 @@ export function VideoUpload() {
 
       const { uploadUrl, key } = await uploadRes.json();
 
-      // Upload to Backblaze (uses standard browser fetch)
+      // 2. Upload to Backblaze
       const b2Response = await fetch(uploadUrl, {
         method: "PUT",
         headers: {
@@ -106,7 +80,7 @@ export function VideoUpload() {
 
       if (!b2Response.ok) throw new Error("Failed to upload to storage");
 
-      // Save to database
+      // 3. Save to database
       const saveRes = await fetch("/api/videos", {
         method: "POST",
         body: JSON.stringify({
@@ -117,8 +91,27 @@ export function VideoUpload() {
 
       if (!saveRes.ok) throw new Error("Failed to save video metadata");
 
-      alert("Success! Video uploaded.");
+      // 4. Handle Success
+      const data = await saveRes.json();
+      const serverVideoData = data.video || data;
+
+      const optimisticVideo: Video = {
+        _id: serverVideoData._id || serverVideoData.id || "temp-id",
+        title: file.name,
+        key: key,
+        url: URL.createObjectURL(file), 
+        createdAt: new Date().toISOString(),
+        owner: "me", 
+        ...serverVideoData, // Merge any other real data from server
+      };
+      
+      if (onUploadSuccess) {
+        onUploadSuccess(optimisticVideo);
+      }
+
       setFile(null);
+      // Removed alert for a smoother UI flow
+      
     } catch (error) {
       console.error(error);
       alert("Upload failed. Check console for details.");
@@ -135,8 +128,6 @@ export function VideoUpload() {
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           className={cn(
-            // Added 'group' for hover effects on children
-            // Added hover:border-primary and hover:bg-primary/5 for "light up" effect
             "group relative h-full rounded-2xl border-2 border-dashed border-border bg-card transition-all hover:border-primary hover:bg-primary/5",
             isDragging && "scale-[1.02] border-primary bg-primary/5"
           )}
@@ -145,8 +136,6 @@ export function VideoUpload() {
             htmlFor="video-upload"
             className="flex h-full cursor-pointer flex-col items-center justify-center px-8 py-16 transition-colors"
           >
-            {/* Icon Container: Added transition and group-hover:scale-110 */}
-
             <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 ring-4 ring-background transition-transform duration-300 group-hover:scale-110">
               {isDragging ? (
                 <FileVideo className="h-8 w-8 text-primary transition-colors" />
@@ -158,10 +147,9 @@ export function VideoUpload() {
               {isDragging ? "Drop your video here" : "Upload your tennis video"}
             </h3>
             <p className="mb-6 text-sm text-muted-foreground text-pretty">
-              Drag and drop or click to browse • MP4, MOV, AVI up to 500MB
+              Drag and drop or click to browse • MP4, MOV, AVI
             </p>
 
-            {/* Button: Added opacity-0 by default and group-hover:opacity-100 */}
             <Button
               type="button"
               size="lg"
@@ -185,7 +173,7 @@ export function VideoUpload() {
           <div className="mb-6 flex items-start justify-between">
             <div className="flex items-start gap-4">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
-                <Video className="h-6 w-6 text-primary" />
+                <VideoIcon className="h-6 w-6 text-primary" />
               </div>
               <div className="flex-1">
                 <h4 className="mb-1 font-semibold text-balance">{file.name}</h4>
@@ -233,17 +221,6 @@ export function VideoUpload() {
           </div>
         </div>
       )}
-    </div>
-  );
-}
-
-// --- Application Layout (for preview) ---
-export default function App() {
-  return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-8">
-      <div className="w-full max-w-md">
-        <VideoUpload />
-      </div>
     </div>
   );
 }

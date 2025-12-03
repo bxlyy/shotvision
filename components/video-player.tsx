@@ -49,7 +49,7 @@ export function RoundedVideo({
       <div
         className={cn(
           // Base layout and rounding
-          "group relative overflow-hidden rounded-2xl border-4 border-dashed border-slate-800 bg-black shadow-sm",
+          "group relative overflow-hidden rounded-2xl border-4 border-dashed border-slate-800 hover:border-primary bg-black shadow-sm",
           // Force hardware acceleration to fix Safari border-radius clipping bugs
           "transform-gpu mask-image-fill",
           // Aspect ratio handling
@@ -77,7 +77,7 @@ export function RoundedVideo({
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-muted/20">
-            <p className="text-muted-foreground text-sm">
+            <p className="text-muted-foreground text-sm mb-25">
               Select a video to play
             </p>
           </div>
