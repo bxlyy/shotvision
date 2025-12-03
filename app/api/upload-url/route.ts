@@ -11,6 +11,14 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
+  const sourceHeader = req.headers.get("x-app-source");
+  if (sourceHeader !== "shotvision-web") {
+    return NextResponse.json(
+      { error: "Forbidden: Direct access denied" },
+      { status: 403 }
+    );
+  }
+
   // Get file details from query params
   const searchParams = req.nextUrl.searchParams;
   const fileType = searchParams.get("fileType") || "video/mp4";

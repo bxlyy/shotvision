@@ -14,7 +14,7 @@ const s3Client = new S3Client({
 });
 
 export async function PATCH(
-  request: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
@@ -23,8 +23,16 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const sourceHeader = req.headers.get("x-app-source");
+    if (sourceHeader !== "shotvision-web") {
+      return NextResponse.json(
+        { error: "Forbidden: Direct access denied" },
+        { status: 403 }
+      );
+    }
+
     const { id } = await params;
-    const { title } = await request.json();
+    const { title } = await req.json();
 
     if (!title) {
       return NextResponse.json({ error: "Title is required" }, { status: 400 });
@@ -60,13 +68,21 @@ export async function PATCH(
 
 // Delete video
 export async function DELETE(
-  request: Request,
+  req: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const sourceHeader = req.headers.get("x-app-source");
+    if (sourceHeader !== "shotvision-web") {
+      return NextResponse.json(
+        { error: "Forbidden: Direct access denied" },
+        { status: 403 }
+      );
     }
 
     const { id } = await params;
