@@ -33,17 +33,41 @@ export async function GET(req: Request) {
   // Use Promise.all since doing multiple async operations in a loop
   const videosWithUrls = await Promise.all(
     videos.map(async (video) => {
+      const targetKey =
+        video.status === "completed" ? video.annotatedKey : video.key;
+      // If something went wrong and have no video file, return metadata without URL
+      if (!targetKey) {
+        return {
+          ...video,
+          url: null,
+          jsonUrl: null,
+          status: "failed",
+        };
+      }
       const command = new GetObjectCommand({
         Bucket: process.env.B2_BUCKET!,
-        Key: video.key, // Using the key we stored in DB
+        Key: targetKey,
       });
 
       // Generate a URL that expires in 1 hour (3600 seconds)
       const signedUrl = await getSignedUrl(b2, command, { expiresIn: 3600 });
 
+      // If have JSON data, get that URL too
+      let jsonUrl = null;
+      if (video.jsonKey) {
+        const jsonCmd = new GetObjectCommand({
+          Bucket: process.env.B2_BUCKET!,
+          Key: video.jsonKey,
+        });
+        jsonUrl = await getSignedUrl(b2, jsonCmd, { expiresIn: 3600 });
+      }
+
       return {
         ...video,
         url: signedUrl, // Attach the temporary URL to the video object
+        jsonUrl,
+        // Pass processing status so frontend can show that video is processing (if video isn't processed yet)
+        status: video.status,
       };
     })
   );
@@ -77,9 +101,37 @@ export async function POST(req: Request) {
       key: key, // The file path in Backblaze
       title: title, // The original filename
       createdAt: new Date(),
+      status: "queued", // So UI knows to show that it is waiting to be processed by model
+      annotatedKey: null,
+      jsonKey: null,
     });
 
-    return NextResponse.json({ success: true, id: result.insertedId });
+    const videoId = result.insertedId.toString();
+
+    // Generate download URL for the AI
+    const command = new GetObjectCommand({
+      Bucket: process.env.B2_BUCKET!,
+      Key: key,
+    });
+    const downloadUrl = await getSignedUrl(b2, command, { expiresIn: 3600 });
+
+    // Call model to do analysis
+    fetch(process.env.AI_WORKER_URL + "/process", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-secret": process.env.AI_SERVICE_SECRET!,
+      },
+      body: JSON.stringify({
+        videoId: videoId,
+        userId: userId,
+        videoUrl: downloadUrl,
+        // Pass raw key so the AI (or webhook) knows what to DELETE later
+        rawKey: key,
+      }),
+    }).catch((err) => console.error("AI Trigger Failed:", err));
+
+    return NextResponse.json({ success: true, id: videoId });
   } catch (error) {
     console.error("Database Error:", error);
     return NextResponse.json(
