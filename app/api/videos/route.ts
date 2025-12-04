@@ -39,6 +39,7 @@ export async function GET(req: Request) {
       if (!targetKey) {
         return {
           ...video,
+          _id: video._id.toString(),
           url: null,
           status: video.status || "failed",
           analysis: null, // Store analysis JSON straight in MongoDB
@@ -47,6 +48,7 @@ export async function GET(req: Request) {
       const command = new GetObjectCommand({
         Bucket: process.env.B2_BUCKET!,
         Key: targetKey,
+        ResponseContentType: "video/mp4",
       });
 
       // Generate a URL that expires in 1 hour (3600 seconds)
@@ -54,6 +56,7 @@ export async function GET(req: Request) {
 
       return {
         ...video,
+        _id: video._id.toString(),
         url: signedUrl, // Attach the temporary URL to the video object
         analysis: video.analysis || null,
         // Pass processing status so frontend can show that video is processing (if video isn't processed yet)
