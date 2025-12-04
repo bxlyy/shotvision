@@ -40,7 +40,11 @@ export function VideoCatalogSelector({
   onVideoSelect,
 }: VideoCatalogSelectorProps) {
   const [isOpen, setIsOpen] = useState(false);
+
+  // State for editing selected video attributes and pushing to the database
   const [isEditing, setIsEditing] = useState(false);
+
+  // States for filtering and searching user's videos
   const [filter, setFilter] = useState<
     "name-asc" | "name-desc" | "date-asc" | "date-desc"
   >("name-asc");
@@ -178,6 +182,7 @@ export function VideoCatalogSelector({
     }
   }, [isOpen]);
 
+  // Sort videos based on the filter applied (name/date, asc/desc)
   const sortedVideos = useMemo(() => {
     if (videos.length === 0) return [];
     return [...videos].sort((a, b) => {
@@ -201,6 +206,7 @@ export function VideoCatalogSelector({
     });
   }, [videos, filter]);
 
+  // Filter videos based on the search query (or show all if empty)
   const filteredVideos = useMemo(() => {
     if (search.trim() === "") return sortedVideos;
     return sortedVideos.filter((video) =>
@@ -226,6 +232,7 @@ export function VideoCatalogSelector({
             <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
               Currently viewing
             </h4>
+            {/* Name of selected video */}
             <div className="flex items-center gap-3">
               <div
                 className={cn(
@@ -250,6 +257,7 @@ export function VideoCatalogSelector({
             </div>
           </div>
 
+          {/* Edit and Clear Buttons for the state when a video is selected */}
           {selectedVideo && (
             <div className="flex flex-col gap-2 shrink-0">
               <Button
@@ -496,6 +504,7 @@ export function VideoCatalogSelector({
                   </p>
                 </div>
               </div>
+              {/* Search Bar and Filter Controls for meaningfully combing through server data */}
               <div className="flex gap-2">
                 <Input
                   className="flex"

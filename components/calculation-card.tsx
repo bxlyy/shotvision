@@ -42,12 +42,14 @@ export function CalculationCard({
         className
       )}
     >
+      {/* Title and description of the calculation */}
       <CardHeader>
         <CardTitle className="text-lg">{title}</CardTitle>
         <CardDescription className="text-gray-300">
           {description}
         </CardDescription>
       </CardHeader>
+      {/* Main content of the calculation */}
       <CardContent>{children}</CardContent>
     </Card>
   );

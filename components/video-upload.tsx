@@ -126,6 +126,18 @@ export function VideoUpload({ onUploadSuccess }: VideoUploadProps) {
     }
   };
 
+
+  /* 
+    Sharabh Ojha:
+    While the backend was added much later, the upload component was part of the initial UI generated using Vercel's v0.app tool. 
+    We later changed much of the styling in Tailwind to fit a new design philosophy applied on our video-catalog and player components (i.e. borders that light up, a button that appears when hovered over to increase user interaction)
+    This initial generation helped us shape the user flow and get a basic drag-and-drop upload (a solved problem, for which many plug-and-play components exist online) working quickly. It also inspired our commitment to defined borders and a grid style on the dashboard.
+
+    Prompt used in initial v0 generation:
+    Please generate the barebones UI (no backend!) for a website that takes video upload input and runs CV algorithms (i.e. Mediapipe) on it to analyze tennis swing. Key things to implement:
+    A video upload component; A login/signup page
+    The name of the site is ShotVision, and a detailed wireframe is provided (image attached). Use a dark theme; theme switching is not required
+  */
   return (
     <div className="h-full w-full">
       {!file ? (
