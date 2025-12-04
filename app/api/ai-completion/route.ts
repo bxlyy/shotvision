@@ -13,7 +13,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { videoId, annotatedKey, jsonKey, rawKey, status } = await req.json();
+    const { videoId, annotatedKey, analysis, rawKey, status } =
+      await req.json();
     const finalStatus = status || "completed";
 
     const client = await clientPromise;
@@ -38,7 +39,7 @@ export async function POST(req: Request) {
         $set: {
           status: "completed",
           annotatedKey: annotatedKey,
-          jsonKey: jsonKey,
+          analysis: analysis,
           // Remove the reference to the raw key so UI never tries to load deleted file again
           key: null,
         },

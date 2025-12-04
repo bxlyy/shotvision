@@ -40,8 +40,8 @@ export async function GET(req: Request) {
         return {
           ...video,
           url: null,
-          jsonUrl: null,
-          status: "failed",
+          status: video.status || "failed",
+          analysis: null, // Store analysis JSON straight in MongoDB
         };
       }
       const command = new GetObjectCommand({
@@ -52,20 +52,10 @@ export async function GET(req: Request) {
       // Generate a URL that expires in 1 hour (3600 seconds)
       const signedUrl = await getSignedUrl(b2, command, { expiresIn: 3600 });
 
-      // If have JSON data, get that URL too
-      let jsonUrl = null;
-      if (video.jsonKey) {
-        const jsonCmd = new GetObjectCommand({
-          Bucket: process.env.B2_BUCKET!,
-          Key: video.jsonKey,
-        });
-        jsonUrl = await getSignedUrl(b2, jsonCmd, { expiresIn: 3600 });
-      }
-
       return {
         ...video,
         url: signedUrl, // Attach the temporary URL to the video object
-        jsonUrl,
+        analysis: video.analysis || null,
         // Pass processing status so frontend can show that video is processing (if video isn't processed yet)
         status: video.status,
       };
@@ -103,7 +93,7 @@ export async function POST(req: Request) {
       createdAt: new Date(),
       status: "queued", // So UI knows to show that it is waiting to be processed by model
       annotatedKey: null,
-      jsonKey: null,
+      analysis: null,
     });
 
     const videoId = result.insertedId.toString();
