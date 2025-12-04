@@ -59,6 +59,7 @@ export function RoundedVideo({
           aspectRatio === "auto" && "h-full w-full"
         )}
       >
+        { /* Main Video Element */}
         {src ? (
           <video
             ref={videoRef}

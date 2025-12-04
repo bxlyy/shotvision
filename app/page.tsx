@@ -110,6 +110,19 @@ export default function HomePage() {
       </SignedIn>
 
       {/* Signed Out - Intro */}
+      {/*
+        Sharabh Ojha:
+        The landing page design was part of the initial UI generated using Vercel's v0.app tool. 
+        While we preserved many elements from that initial design, some sections were moved (such as our VideoUpload component, which made more sense in the signed-in dashboard) to better fit our app's user flow.
+        In addition, the scope of this page has vastly expanded since the initial generation, with the key addition being the dashboard itself, along with the many components that make it up.
+
+        This initial generation helped us fully decide how we wanted our website to look. The implementation of this set of descriptions, combined with the fonts defined in layout.tsx, were design choices we liked and ran with throughout the site.
+
+        Prompt used in initial v0 generation:
+        Please generate the barebones UI (no backend!) for a website that takes video upload input and runs CV algorithms (i.e. Mediapipe) on it to analyze tennis swing. Key things to implement:
+        A video upload component; A login/signup page
+        The name of the site is ShotVision, and a detailed wireframe is provided (image attached). Use a dark theme; theme switching is not required
+       */}
       <SignedOut>
         <section className="container mx-auto px-6 py-20 md:py-32">
           <div className="mx-auto max-w-4xl text-center">
