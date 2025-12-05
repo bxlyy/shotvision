@@ -6,17 +6,42 @@ import {
   Activity,
   Target,
   Zap,
+  RotateCw,
+  Timer,
+  TrendingUp,
 } from "lucide-react";
 import { VideoCatalogSelector, type Video } from "@/components/video-catalog";
 import { RoundedVideo } from "@/components/video-player";
 import { VideoUpload } from "@/components/video-upload";
 import { CalculationCard } from "@/components/calculation-card";
+import { PhaseItem } from "@/components/phase-item";
+import { StatRow } from "@/components/stat-row";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
+import { useVideoStatus } from "@/hooks/use-video-status";
 
 export default function HomePage() {
   const [activeVideo, setActiveVideo] = useState<Video | null>(null);
+
+  // Poll for updates
+  // The API now returns a valid 'url' property, not just keys!
+  const { data: freshData, isComplete } = useVideoStatus(activeVideo?._id ?? null);
+
+  // Compute the Display Video (THE FIX IS HERE)
+  // Check if we have fresh data AND if that data matches the current video ID.
+  // If IDs don't match, it means the hook is still holding old data, so ignore it.
+  const isDataForCurrentVideo = freshData && freshData._id === activeVideo?._id;
+
+  // Compute the Display Video
+  // We prioritize freshData (from DB) over activeVideo (from local state/upload)
+  const displayVideo = activeVideo
+    ? (isDataForCurrentVideo ? { ...activeVideo, ...freshData } : activeVideo)
+    : null;
+  const videoUrl = displayVideo?.url || activeVideo?.url;
+
+  // 4. Extract analysis safely
+  const analysis = displayVideo?.analysis || {};
 
   const handleVideoChange = (video: Video | null) => {
     setActiveVideo(video);
@@ -42,9 +67,7 @@ export default function HomePage() {
           <SignedOut>
             <div className="flex items-center gap-3">
               <Link href="/login">
-                <Button variant="ghost" size="sm">
-                  Log in
-                </Button>
+                <Button variant="ghost" size="sm">Log in</Button>
               </Link>
               <Link href="/signup">
                 <Button size="sm">Sign up</Button>
@@ -54,56 +77,159 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* Signed In - Dashboard*/}
+      {/* Dashboard */}
       <SignedIn>
         <div className="m-6 grid grid-cols-1 gap-4 md:grid-cols-4">
+          
+          {/* 1. Upload Component */}
           <div className="md:row-span-2 md:col-start-1 md:row-start-1">
             <VideoUpload onUploadSuccess={handleVideoChange} />
           </div>
 
+          {/* 2. Video Selector */}
           <div className="md:row-span-2 md:col-start-2 md:row-start-1">
             <VideoCatalogSelector
-              selectedVideo={activeVideo}
+              selectedVideo={displayVideo}
               onVideoSelect={handleVideoChange}
             />
           </div>
 
+          {/* 3. Video Player */}
           <RoundedVideo
-            src={activeVideo?.url || ""}
-            title={activeVideo?.title || "Select a video from catalog"}
+            src={videoUrl || ""}
+            title={displayVideo?.title || "Select a video"}
             className="md:col-span-2 md:row-span-2 md:col-start-3 md:row-start-1"
           />
 
+          {/* 4. Data Cards */}
+          {/* CARD: PHASES */}
           <div className="md:row-start-3">
-            <CalculationCard title="Phases" description="Card Description">
-              <p>Calculations Here</p>
+            <CalculationCard title="Phases" description="Swing Breakdown">
+               {analysis.phases ? (
+                 <div className="space-y-1">
+                   {Object.entries(analysis.phases).map(([key, data]: any) => (
+                     <PhaseItem key={key} name={key} data={data} />
+                   ))}
+                 </div>
+               ) : <p className="text-sm text-muted-foreground italic">Waiting for data...</p>}
             </CalculationCard>
           </div>
 
+          {/* CARD: ENGINE */}
           <div className="md:row-start-3">
-            <CalculationCard title="Engine" description="Card Description">
-              <p>Calculations Here</p>
+            <CalculationCard title="Engine" description="Rotational Power">
+               {analysis.engine ? (
+                 <div className="space-y-4">
+                    {/* Highlight Metric: Separation (X-Factor) */}
+                    <div className="rounded-lg bg-primary/5 p-3 text-center border border-primary/10">
+                      <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Hip-Shldr Separation</span>
+                      <div className="text-2xl font-bold text-primary my-1">
+                        {analysis.engine.hip_shoulder_separation?.max_value?.toFixed(1)}°
+                      </div>
+                      <span className="text-xs text-muted-foreground">
+                        at {analysis.engine.hip_shoulder_separation?.timestamp}s
+                      </span>
+                    </div>
+
+                    <div className="space-y-1">
+                      <StatRow 
+                        label="Shoulder Rot" 
+                        value={analysis.engine.max_shoulder_rotation?.value} 
+                        unit="°" 
+                        icon={RotateCw}
+                      />
+                      <StatRow 
+                        label="Hip Rot" 
+                        value={analysis.engine.max_hip_rotation?.value} 
+                        unit="°"
+                        icon={RotateCw} 
+                      />
+                    </div>
+                 </div>
+               ) : <p className="text-sm text-muted-foreground italic">Waiting for data...</p>}
             </CalculationCard>
           </div>
 
+          {/* CARD: TRANSMISSION (Mapped to Tempo) */}
           <div className="md:row-start-3">
-            <CalculationCard
-              title="Transmission"
-              description="Card Description"
-            >
-              <p>Calculations Here</p>
+            <CalculationCard title="Transmission" description="Rhythm & Tempo">
+               {(analysis.tempo || analysis.transmission) ? (
+                 // Fallback to use .tempo if .transmission is missing in the JSON
+                 <div className="space-y-2">
+                   <div className="flex items-center justify-center p-4">
+                      <div className="text-center">
+                        <div className="text-3xl font-bold tracking-tighter">
+                          {analysis.tempo?.swing_rhythm_ratio?.toFixed(1)}:1
+                        </div>
+                        <div className="text-xs text-muted-foreground uppercase mt-1">Rhythm Ratio</div>
+                      </div>
+                   </div>
+                   
+                   <div className="space-y-1 bg-muted/30 rounded p-2">
+                     <StatRow 
+                        label="Backswing Time" 
+                        value={analysis.tempo?.backswing_duration} 
+                        unit="s"
+                        icon={Timer} 
+                      />
+                      <StatRow 
+                        label="Fwd Swing Time" 
+                        value={analysis.tempo?.forward_swing_duration} 
+                        unit="s"
+                        icon={Zap} 
+                      />
+                   </div>
+                 </div>
+               ) : <p className="text-sm text-muted-foreground italic">Processing...</p>}
             </CalculationCard>
           </div>
 
+          {/* CARD: DRIVER */}
           <div className="md:row-start-3">
-            <CalculationCard title="Driver" description="Card Description">
-              <p>Calculations Here</p>
+            <CalculationCard title="Driver" description="Key Velocities">
+              {/* Using phases.contact data as a proxy for Driver stats if specific driver object is missing */}
+              {analysis.phases?.contact ? (
+                <div className="space-y-2">
+                  <StatRow 
+                    label="Wrist Velocity" 
+                    value={analysis.phases.contact.wrist_velocity} 
+                    unit="m/s" // Assuming unit
+                    icon={TrendingUp}
+                  />
+                  <StatRow 
+                    label="Elbow Angle" 
+                    value={analysis.phases.contact.elbow_angle} 
+                    unit="°"
+                    icon={Target}
+                  />
+                  <div className="mt-4 pt-2 border-t border-border text-xs text-muted-foreground">
+                    Velocity measured at impact frame {analysis.phases.contact.frame}.
+                  </div>
+                </div>
+              ) : (
+                analysis.driver ? (
+                  <pre className="text-xs overflow-auto">{JSON.stringify(analysis.driver, null, 2)}</pre>
+                ) : <p className="text-sm text-muted-foreground italic">Processing...</p>
+              )}
             </CalculationCard>
           </div>
 
+          {/* 5. Summary Card */}
           <div className="md:col-span-4">
-            <CalculationCard title="Overall" description="Card Description">
-              <p>Calculations Here</p>
+            <CalculationCard title="Overall" description="Swing Summary">
+               {displayVideo?.status === 'processing' || displayVideo?.status === 'queued' ? (
+                 <div className="flex items-center gap-2 text-yellow-600">
+                    <Activity className="animate-pulse h-4 w-4" />
+                    <span>AI is analyzing your swing...</span>
+                 </div>
+               ) : (
+                 <div className="prose prose-sm dark:prose-invert max-w-none">
+                   <p className="text-pretty">
+                    {analysis.overallSummary || 
+                     "dsjflkdsjf"}
+                   </p>
+                 </div>
+               )}
             </CalculationCard>
           </div>
         </div>

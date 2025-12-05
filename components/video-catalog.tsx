@@ -28,6 +28,9 @@ export interface Video {
   url: string; // signed URL
   createdAt: string;
   owner: string;
+  status: "queued" | "completed";
+  annotatedKey?: string;
+  analysis?: any;
 }
 
 interface VideoCatalogSelectorProps {
