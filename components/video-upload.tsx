@@ -17,6 +17,9 @@ interface VideoUploadProps {
   onUploadSuccess?: (video: Video) => void;
 }
 
+// 500MB in bytes
+const MAX_FILE_SIZE = 500 * 1024 * 1024;
+
 export function VideoUpload({ onUploadSuccess }: VideoUploadProps) {
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -26,7 +29,13 @@ export function VideoUpload({ onUploadSuccess }: VideoUploadProps) {
     e.preventDefault();
     setIsDragging(false);
     const droppedFile = e.dataTransfer.files[0];
+
     if (droppedFile && droppedFile.type.startsWith("video/")) {
+      // Check file size
+      if (droppedFile.size > MAX_FILE_SIZE) {
+        alert("File is too large. Please upload a video smaller than 500MB.");
+        return;
+      }
       setFile(droppedFile);
     }
   }, []);
@@ -44,7 +53,15 @@ export function VideoUpload({ onUploadSuccess }: VideoUploadProps) {
   const handleFileInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const selectedFile = e.target.files?.[0];
+
       if (selectedFile && selectedFile.type.startsWith("video/")) {
+        // Check file size
+        if (selectedFile.size > MAX_FILE_SIZE) {
+          alert("File is too large. Please upload a video smaller than 500MB.");
+          // Reset the input so the user can try again immediately with a valid file
+          e.target.value = ""; 
+          return;
+        }
         setFile(selectedFile);
       }
     },
@@ -109,7 +126,7 @@ export function VideoUpload({ onUploadSuccess }: VideoUploadProps) {
         url: URL.createObjectURL(file),
         createdAt: new Date().toISOString(),
         owner: "me",
-        ...serverVideoData, // Merge any other real data from server
+        ...serverVideoData,
       };
 
       if (onUploadSuccess) {
@@ -117,7 +134,6 @@ export function VideoUpload({ onUploadSuccess }: VideoUploadProps) {
       }
 
       setFile(null);
-      // Removed alert for a smoother UI flow
     } catch (error) {
       console.error(error);
       alert("Upload failed. Check console for details.");
@@ -126,18 +142,6 @@ export function VideoUpload({ onUploadSuccess }: VideoUploadProps) {
     }
   };
 
-
-  /* 
-    Sharabh Ojha:
-    While the backend was added much later, the upload component was part of the initial UI generated using Vercel's v0.app tool. 
-    We later changed much of the styling in Tailwind to fit a new design philosophy applied on our video-catalog and player components (i.e. borders that light up, a button that appears when hovered over to increase user interaction)
-    This initial generation helped us shape the user flow and get a basic drag-and-drop upload (a solved problem, for which many plug-and-play components exist online) working quickly. It also inspired our commitment to defined borders and a grid style on the dashboard.
-
-    Prompt used in initial v0 generation:
-    Please generate the barebones UI (no backend!) for a website that takes video upload input and runs CV algorithms (i.e. Mediapipe) on it to analyze tennis swing. Key things to implement:
-    A video upload component; A login/signup page
-    The name of the site is ShotVision, and a detailed wireframe is provided (image attached). Use a dark theme; theme switching is not required
-  */
   return (
     <div className="h-full w-full">
       {!file ? (
@@ -165,7 +169,8 @@ export function VideoUpload({ onUploadSuccess }: VideoUploadProps) {
               {isDragging ? "Drop your video here" : "Upload your tennis video"}
             </h3>
             <p className="mb-6 text-sm text-muted-foreground text-pretty">
-              Drag and drop or click to browse • MP4, MOV, AVI
+              {/* Updated limit text */}
+              Drag and drop or click to browse • Max 500MB
             </p>
 
             <Button
