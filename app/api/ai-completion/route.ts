@@ -3,6 +3,7 @@ import clientPromise from "@/lib/mongodb";
 import { DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { ObjectId } from "mongodb";
 import { NextResponse } from "next/server";
+import { calculateSwingScore } from "@/lib/scoring";
 
 // AI calls this when finished
 export async function POST(req: Request) {
@@ -31,6 +32,9 @@ export async function POST(req: Request) {
       return NextResponse.json({ success: true });
     }
 
+    // Call swing score script /lib/scoring.ts
+    const swingScore = calculateSwingScore(analysis);
+
     // Update MongoDB
     // Set status to completed, save the new file paths
     await db.collection("videos").updateOne(
@@ -40,6 +44,7 @@ export async function POST(req: Request) {
           status: "completed",
           annotatedKey: annotatedKey,
           analysis: analysis,
+          score: swingScore,
           // Remove the reference to the raw key so UI never tries to load deleted file again
           key: null,
         },

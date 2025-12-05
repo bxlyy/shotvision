@@ -97,6 +97,7 @@ export async function POST(req: Request) {
       status: "queued", // So UI knows to show that it is waiting to be processed by model
       annotatedKey: null,
       analysis: null,
+      score: null,
     });
 
     const videoId = result.insertedId.toString();
