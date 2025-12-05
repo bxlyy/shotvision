@@ -20,6 +20,7 @@ import { VideoUpload } from "@/components/video-upload";
 import { CalculationCard } from "@/components/calculation-card";
 import { PhaseItem } from "@/components/phase-item";
 import { StatRow } from "@/components/stat-row";
+import { HistoryChart } from "@/components/history-chart";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
@@ -421,7 +422,7 @@ export default function HomePage() {
                   
                   {/* 1. Main Total Score */}
                   <div className="text-center mb-8">
-                    <div className="text-6xl font-extrabold text-primary tracking-tighter">
+                    <div className="text-6xl font-extrabold text-white tracking-tighter">
                       {displayVideo?.score?.total ?? "N/A"}
                     </div>
                     <div className="text-sm font-medium text-muted-foreground uppercase tracking-widest mt-2">
@@ -460,15 +461,9 @@ export default function HomePage() {
             </CalculationCard>
           </div>
 
-          {/* LEADERBOARDS */}
-
-          {/* 1: 5 Best Personal Scores; should provide the name of the video and the score */}
-          <div className="md:row-start-5 md:col-span-2">
-
-          </div>
-          {/* 2: 5 Best Scores Across All Users; should provide the first name of the user and the score */}
-          <div className="md:row-start-5 md:col-span-2">
-
+          {/* All personal Scores over time (bar chart) */}
+          <div className="md:row-start-5 md:col-span-4">
+            <HistoryChart />
           </div>
 
         </div>
