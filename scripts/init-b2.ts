@@ -1,5 +1,7 @@
 // Run this file manually with 'npx tsx scripts/init-b2.ts'
 // Created this to correct B2 settings
+// With CORS rules, I had no idea how to approach it. I initially wrote it as a backend route under app/api/fix-cors/route.ts with Google Gemini's help. However, I realized that it was publicly exposed, so I refactored it as a script under this "scripts" folder.
+// With this file, it sets the B2 bucket's CORS rules to allow the Next.js app to access its data
 
 import { PutBucketCorsCommand } from "@aws-sdk/client-s3";
 import { config } from "dotenv";
