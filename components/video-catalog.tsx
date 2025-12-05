@@ -31,6 +31,7 @@ export interface Video {
   status: "queued" | "completed";
   annotatedKey?: string;
   analysis?: any;
+  score?: number;
 }
 
 interface VideoCatalogSelectorProps {

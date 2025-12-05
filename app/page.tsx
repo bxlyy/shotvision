@@ -10,6 +10,10 @@ import {
   Timer,
   TrendingUp,
   Loader2,
+  CheckCircle2,
+  AlertCircle,
+  XCircle,
+  Info, // Added Info icon for descriptions
 } from "lucide-react";
 import { VideoCatalogSelector, type Video } from "@/components/video-catalog";
 import { RoundedVideo } from "@/components/video-player";
@@ -22,19 +26,82 @@ import Link from "next/link";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { useVideoStatus } from "@/hooks/use-video-status";
 
+// --- 1. CONFIGURATION: IDEAL RANGES ---
+const IDEAL_RANGES = {
+  engine: {
+    separation: { min: 20, max: 40, label: "20°-40°" },
+    shoulder_rot: { min: 90, max: 110, label: "90°-110°" },
+    hip_rot: { min: 45, max: 70, label: "45°-70°" },
+  },
+  tempo: {
+    rhythm: { min: 2.5, max: 3.0, label: "2.5-3.0" },
+    fwd_duration: { min: 0.20, max: 0.35, label: "0.20s-0.35s" },
+  },
+};
+
+// --- 2. CONFIGURATION: METRIC DESCRIPTIONS ---
+// Descriptions derived from "What it Measures (Logic)" column in PDF 
+const DESCRIPTIONS = {
+  engine: {
+    separation: "The 'Coil' or X-Factor. Difference between shoulder rotation and hip rotation at the peak of the backswing.",
+    shoulder_rot: "Max rotation of upper body relative to baseline. Essential for loading the 'Engine'.",
+    hip_rot: "Max rotation of pelvis. Hips must resist shoulders slightly to create separation.",
+  },
+  tempo: {
+    rhythm: "Ratio of time spent in Backswing vs. Forward Swing (explosive release).",
+    backswing_time: "The loading phase. Ends at the 'Racket Drop' or 'Max Extension'.",
+    fwd_duration: "The explosive phase duration.",
+  },
+};
+
+// --- Helper: Status Checker ---
+const checkRange = (val: number | undefined, range: { min: number; max: number }) => {
+  if (val === undefined || val === null) return false;
+  const absVal = Math.abs(val); 
+  return absVal >= range.min && absVal <= range.max;
+};
+
+// --- Helper: Get Status Color ---
+const getCardStatusClass = (results: boolean[]) => {
+  if (results.length === 0) return "";
+  const passed = results.filter((r) => r).length;
+
+  if (passed === results.length) return "border-green-500/50 bg-green-500/5"; 
+  if (passed === 0) return "border-red-500/50 bg-red-500/5"; 
+  return "border-yellow-500/50 bg-yellow-500/5"; 
+};
+
+// --- Component: Range Badge ---
+const RangeBadge = ({ isGood, label }: { isGood: boolean; label: string }) => (
+  <span className={`text-[10px] ml-auto font-mono px-2 py-0.5 rounded-full border ${
+      isGood 
+        ? "text-green-600 bg-green-500/10 border-green-500/20" 
+        : "text-red-500 bg-red-500/10 border-red-500/20"
+    }`}>
+    {isGood ? "✓" : "Target"}: {label}
+  </span>
+);
+
+// --- Component: Metric Description Helper ---
+const MetricDesc = ({ text }: { text: string }) => (
+  <div className="flex gap-1.5 items-start mt-1 mb-3 px-1">
+    <Info className="w-3 h-3 text-muted-foreground/50 mt-0.5 shrink-0" />
+    <p className="text-[10px] text-muted-foreground leading-tight">
+      {text}
+    </p>
+  </div>
+);
+
 // --- Helper Component for State Management ---
-// Now accepts a boolean 'loading' prop for cleaner logic control
-const AnalysisState = ({ 
-  loading, 
-  data, 
-  children 
-}: { 
-  loading: boolean; 
-  data: any; 
-  children: React.ReactNode 
+const AnalysisState = ({
+  loading,
+  data,
+  children,
+}: {
+  loading: boolean;
+  data: any;
+  children: React.ReactNode;
 }) => {
-  
-  // 1. Loading State (Generating Inferences)
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center py-8 text-muted-foreground/80 gap-3">
@@ -44,9 +111,8 @@ const AnalysisState = ({
     );
   }
 
-  // 2. Unavailable State (Processing done, but specific data attribute is missing)
-  const isEmptyObject = typeof data === 'object' && data !== null && Object.keys(data).length === 0;
-  
+  const isEmptyObject = typeof data === "object" && data !== null && Object.keys(data).length === 0;
+
   if (!data || isEmptyObject) {
     return (
       <div className="flex h-full items-center justify-center py-8">
@@ -57,36 +123,53 @@ const AnalysisState = ({
     );
   }
 
-  // 3. Available State
   return <>{children}</>;
 };
 
 export default function HomePage() {
   const [activeVideo, setActiveVideo] = useState<Video | null>(null);
-
-  // Poll for updates
   const { data: freshData } = useVideoStatus(activeVideo?._id ?? null);
-
-  // Compute the Display Video
   const isDataForCurrentVideo = freshData && freshData._id === activeVideo?._id;
 
-  // We prioritize freshData (from DB) over activeVideo (from local state/upload)
   const displayVideo = activeVideo
-    ? (isDataForCurrentVideo ? { ...activeVideo, ...freshData } : activeVideo)
+    ? isDataForCurrentVideo
+      ? { ...activeVideo, ...freshData }
+      : activeVideo
     : null;
   const videoUrl = displayVideo?.url || activeVideo?.url;
 
-  // 4. Extract analysis safely
   const analysis = displayVideo?.analysis || {};
-  
-  // LOGIC FIX:
-  // If we have an active video, and status is NOT 'completed' (i.e. undefined), 
-  // we consider it to be processing.
-  const isProcessing = !!activeVideo && displayVideo?.status !== 'completed';
+  const isProcessing = !!activeVideo && displayVideo?.status !== "completed";
 
   const handleVideoChange = (video: Video | null) => {
     setActiveVideo(video);
   };
+
+  // --- PRE-CALCULATE ENGINE STATUS ---
+  const engineData = analysis.engine || {};
+  const sepVal = engineData?.hip_shoulder_separation?.max_value;
+  const shldrVal = engineData?.max_shoulder_rotation?.value;
+  const hipVal = engineData?.max_hip_rotation?.value;
+
+  const isSepGood = checkRange(sepVal, IDEAL_RANGES.engine.separation);
+  const isShldrGood = checkRange(shldrVal, IDEAL_RANGES.engine.shoulder_rot);
+  const isHipGood = checkRange(hipVal, IDEAL_RANGES.engine.hip_rot);
+
+  const engineStatusClass = (!isProcessing && engineData.max_shoulder_rotation)
+    ? getCardStatusClass([isSepGood, isShldrGood, isHipGood])
+    : "";
+
+  // --- PRE-CALCULATE TEMPO STATUS ---
+  const tempoData = analysis.tempo || analysis.transmission || {};
+  const rhythmVal = tempoData?.swing_rhythm_ratio;
+  const fwdTimeVal = tempoData?.forward_swing_duration;
+
+  const isRhythmGood = checkRange(rhythmVal, IDEAL_RANGES.tempo.rhythm);
+  const isTimeGood = checkRange(fwdTimeVal, IDEAL_RANGES.tempo.fwd_duration);
+
+  const tempoStatusClass = (!isProcessing && tempoData.swing_rhythm_ratio)
+    ? getCardStatusClass([isRhythmGood, isTimeGood])
+    : "";
 
   return (
     <div className="min-h-screen bg-background">
@@ -122,20 +205,16 @@ export default function HomePage() {
       <SignedIn>
         <div className="m-6 grid grid-cols-1 gap-4 md:grid-cols-4">
           
-          {/* 1. Upload Component */}
+          {/* 1. Upload & Video Components (Unchanged) */}
           <div className="md:row-span-2 md:col-start-1 md:row-start-1">
             <VideoUpload onUploadSuccess={handleVideoChange} />
           </div>
-
-          {/* 2. Video Selector */}
           <div className="md:row-span-2 md:col-start-2 md:row-start-1">
             <VideoCatalogSelector
               selectedVideo={displayVideo}
               onVideoSelect={handleVideoChange}
             />
           </div>
-
-          {/* 3. Video Player */}
           <RoundedVideo
             src={videoUrl || ""}
             title={displayVideo?.title || "Select a video"}
@@ -149,99 +228,160 @@ export default function HomePage() {
             <CalculationCard title="Phases" description="Swing Breakdown">
               <AnalysisState loading={isProcessing} data={analysis.phases}>
                 <div className="space-y-1">
-                  {analysis.phases && Object.entries(analysis.phases).map(([key, data]: any) => (
-                    <PhaseItem key={key} name={key} data={data} />
-                  ))}
+                  {analysis.phases &&
+                    Object.entries(analysis.phases).map(([key, data]: any) => (
+                      <PhaseItem key={key} name={key} data={data} />
+                    ))}
                 </div>
               </AnalysisState>
             </CalculationCard>
           </div>
 
-          {/* CARD: ENGINE */}
+          {/* CARD: ENGINE (With Descriptions) */}
           <div className="md:row-start-3">
-            <CalculationCard title="Engine" description="Rotational Power">
+            <CalculationCard 
+              title="Engine" 
+              description="Rotational Power"
+              className={engineStatusClass}
+            >
               <AnalysisState loading={isProcessing} data={analysis.engine}>
                 <div className="space-y-4">
-                   {/* Highlight Metric: Separation (X-Factor) */}
-                   <div className="rounded-lg bg-primary/5 p-3 text-center border border-primary/10">
-                     <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Hip-Shldr Separation</span>
-                     <div className="text-2xl font-bold text-primary my-1">
-                       {analysis.engine?.hip_shoulder_separation?.max_value?.toFixed(1)}°
-                     </div>
-                     <span className="text-xs text-muted-foreground">
-                       at {analysis.engine?.hip_shoulder_separation?.timestamp}s
-                     </span>
-                   </div>
+                  
+                  {/* Highlight Metric: Separation */}
+                  <div>
+                    <div className={`rounded-lg p-3 text-center border transition-colors ${
+                        isSepGood ? "bg-green-500/10 border-green-500/20" : "bg-primary/5 border-primary/10"
+                      }`}>
+                      <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">
+                        Hip-Shldr Separation
+                      </span>
+                      <div className="text-2xl font-bold text-primary my-1 flex items-center justify-center gap-2">
+                        {sepVal?.toFixed(1)}°
+                        {isSepGood ? <CheckCircle2 className="w-4 h-4 text-green-500"/> : <AlertCircle className="w-4 h-4 text-amber-500"/>}
+                      </div>
+                      <div className="flex justify-center mt-1">
+                          <RangeBadge isGood={isSepGood} label={IDEAL_RANGES.engine.separation.label} />
+                      </div>
+                    </div>
+                    {/* Description */}
+                    <MetricDesc text={DESCRIPTIONS.engine.separation} />
+                  </div>
 
-                   <div className="space-y-1">
-                     <StatRow 
-                       label="Shoulder Rot" 
-                       value={analysis.engine?.max_shoulder_rotation?.value} 
-                       unit="°" 
-                       icon={RotateCw}
-                     />
-                     <StatRow 
-                       label="Hip Rot" 
-                       value={analysis.engine?.max_hip_rotation?.value} 
-                       unit="°"
-                       icon={RotateCw} 
-                     />
-                   </div>
+                  <div className="space-y-3">
+                    {/* Shoulder Rotation Row */}
+                    <div>
+                        <div className="flex items-center justify-between mb-1">
+                             <span className="text-xs text-muted-foreground">Ideal: {IDEAL_RANGES.engine.shoulder_rot.label}</span>
+                             <div className={`w-2 h-2 rounded-full ${isShldrGood ? 'bg-green-500' : 'bg-red-400'}`} />
+                        </div>
+                        <StatRow
+                          label="Shoulder Rot"
+                          value={shldrVal}
+                          unit="°"
+                          icon={RotateCw}
+                        />
+                        <MetricDesc text={DESCRIPTIONS.engine.shoulder_rot} />
+                    </div>
+
+                    {/* Hip Rotation Row */}
+                    <div>
+                        <div className="flex items-center justify-between mb-1">
+                             <span className="text-xs text-muted-foreground">Ideal: {IDEAL_RANGES.engine.hip_rot.label}</span>
+                             <div className={`w-2 h-2 rounded-full ${isHipGood ? 'bg-green-500' : 'bg-red-400'}`} />
+                        </div>
+                        <StatRow
+                          label="Hip Rot"
+                          value={hipVal}
+                          unit="°"
+                          icon={RotateCw}
+                        />
+                        <MetricDesc text={DESCRIPTIONS.engine.hip_rot} />
+                    </div>
+                  </div>
                 </div>
               </AnalysisState>
             </CalculationCard>
           </div>
 
-          {/* CARD: TRANSMISSION (Mapped to Tempo) */}
+          {/* CARD: TRANSMISSION / TEMPO (With Descriptions) */}
           <div className="md:row-start-3">
-            <CalculationCard title="Transmission" description="Rhythm & Tempo">
-               {/* Check for either tempo or transmission data */}
-               <AnalysisState loading={isProcessing} data={analysis.tempo || analysis.transmission}>
-                 <div className="space-y-2">
-                   <div className="flex items-center justify-center p-4">
-                      <div className="text-center">
-                        <div className="text-3xl font-bold tracking-tighter">
-                          {analysis.tempo?.swing_rhythm_ratio?.toFixed(1)}:1
+            <CalculationCard 
+              title="Transmission" 
+              description="Rhythm & Tempo"
+              className={tempoStatusClass}
+            >
+              <AnalysisState loading={isProcessing} data={analysis.tempo || analysis.transmission}>
+                <div className="space-y-2">
+                  
+                  {/* Rhythm Ratio */}
+                  <div>
+                    <div className="flex items-center justify-center pt-2 px-4 pb-2">
+                      <div className="text-center w-full">
+                        <div className="flex items-center justify-center gap-2 mb-2">
+                          <div className="text-3xl font-bold tracking-tighter">
+                              {rhythmVal?.toFixed(1)}:1
+                          </div>
                         </div>
-                        <div className="text-xs text-muted-foreground uppercase mt-1">Rhythm Ratio</div>
+                        <div className="flex justify-center mb-2">
+                          <RangeBadge isGood={isRhythmGood} label={IDEAL_RANGES.tempo.rhythm.label} />
+                        </div>
+                        <div className="text-xs text-muted-foreground uppercase">Rhythm Ratio</div>
                       </div>
-                   </div>
-                   
-                   <div className="space-y-1 bg-muted/30 rounded p-2">
-                     <StatRow 
-                       label="Backswing Time" 
-                       value={analysis.tempo?.backswing_duration} 
-                       unit="s"
-                       icon={Timer} 
-                     />
-                     <StatRow 
-                       label="Fwd Swing Time" 
-                       value={analysis.tempo?.forward_swing_duration} 
-                       unit="s"
-                       icon={Zap} 
-                     />
-                   </div>
-                 </div>
-               </AnalysisState>
+                    </div>
+                    <div className="px-2">
+                      <MetricDesc text={DESCRIPTIONS.tempo.rhythm} />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 bg-muted/30 rounded p-3">
+                    {/* Backswing */}
+                    <div>
+                      <StatRow
+                        label="Backswing Time"
+                        value={tempoData?.backswing_duration}
+                        unit="s"
+                        icon={Timer}
+                      />
+                      <MetricDesc text={DESCRIPTIONS.tempo.backswing_time} />
+                    </div>
+                    
+                    {/* Forward Swing */}
+                    <div className="pt-2 border-t border-border/50">
+                        <div className="flex items-center justify-between mb-1">
+                            <span className="text-[10px] text-muted-foreground ml-8">Target: {IDEAL_RANGES.tempo.fwd_duration.label}</span>
+                            <span className={`text-[10px] ${isTimeGood ? 'text-green-500' : 'text-red-500'}`}>
+                                {isTimeGood ? "Good" : "Adjust"}
+                            </span>
+                        </div>
+                        <StatRow
+                          label="Fwd Swing Time"
+                          value={fwdTimeVal}
+                          unit="s"
+                          icon={Zap}
+                        />
+                         <MetricDesc text={DESCRIPTIONS.tempo.fwd_duration} />
+                    </div>
+                  </div>
+                </div>
+              </AnalysisState>
             </CalculationCard>
           </div>
 
           {/* CARD: DRIVER */}
           <div className="md:row-start-3">
             <CalculationCard title="Driver" description="Key Velocities">
-              {/* Pass the primary data source (phases.contact) or secondary (driver) to the checker */}
               <AnalysisState loading={isProcessing} data={analysis.phases?.contact || analysis.driver}>
                 {analysis.phases?.contact ? (
                   <div className="space-y-2">
-                    <StatRow 
-                      label="Wrist Velocity" 
-                      value={analysis.phases.contact.wrist_velocity} 
-                      unit="m/s" 
+                    <StatRow
+                      label="Wrist Velocity"
+                      value={analysis.phases.contact.wrist_velocity}
+                      unit="m/s"
                       icon={TrendingUp}
                     />
-                    <StatRow 
-                      label="Elbow Angle" 
-                      value={analysis.phases.contact.elbow_angle} 
+                    <StatRow
+                      label="Elbow Angle"
+                      value={analysis.phases.contact.elbow_angle}
                       unit="°"
                       icon={Target}
                     />
@@ -250,8 +390,9 @@ export default function HomePage() {
                     </div>
                   </div>
                 ) : (
-                  // Fallback if driver data exists but not phase.contact
-                  <pre className="text-xs overflow-auto">{JSON.stringify(analysis.driver, null, 2)}</pre>
+                  <pre className="text-xs overflow-auto">
+                    {JSON.stringify(analysis.driver, null, 2)}
+                  </pre>
                 )}
               </AnalysisState>
             </CalculationCard>
