@@ -12,7 +12,6 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
-  XCircle,
   Info, // Added Info icon for descriptions
 } from "lucide-react";
 import { VideoCatalogSelector, type Video } from "@/components/video-catalog";
@@ -29,12 +28,12 @@ import { useVideoStatus } from "@/hooks/use-video-status";
 // --- 1. CONFIGURATION: IDEAL RANGES ---
 const IDEAL_RANGES = {
   engine: {
-    separation: { min: 20, max: 40, label: "20°-40°" },
-    shoulder_rot: { min: 90, max: 110, label: "90°-110°" },
-    hip_rot: { min: 45, max: 70, label: "45°-70°" },
+    separation: { min: 35, max: 55, label: "35°-55°" }, 
+    shoulder_rot: { min: 130, max: 165, label: "130°-165°" }, 
+    hip_rot: { min: 140, max: 170, label: "140°-170°" }, 
   },
   tempo: {
-    rhythm: { min: 2.5, max: 3.0, label: "2.5-3.0" },
+    rhythm: { min: 2.5, max: 3.1, label: "2.5-3.1" },
     fwd_duration: { min: 0.20, max: 0.35, label: "0.20s-0.35s" },
   },
 };
@@ -145,16 +144,32 @@ export default function HomePage() {
     setActiveVideo(video);
   };
 
-  // --- PRE-CALCULATE ENGINE STATUS ---
-  const engineData = analysis.engine || {};
-  const sepVal = engineData?.hip_shoulder_separation?.max_value;
-  const shldrVal = engineData?.max_shoulder_rotation?.value;
-  const hipVal = engineData?.max_hip_rotation?.value;
+  const normalizeAngle = (angle: number) => {
+    let a = angle % 360;
+    if (a > 180) a = 360 - a;
+    return Math.abs(a);
+  };
 
+  // --- PRE-CALCULATE ENGINE STATUS ---
+  // 1. Get Raw Values (FIXED: Accessing via 'engine' property)
+  const engineData = analysis.engine || {};
+  
+  const rawSep = engineData?.hip_shoulder_separation?.max_value;
+  const rawShldr = engineData?.max_shoulder_rotation?.value;
+  const rawHip = engineData?.max_hip_rotation?.value;
+
+  // 2. Normalize them for Display AND Checking
+  // Now that raw values are found, this will correctly convert 316° -> 44°
+  const sepVal = rawSep !== undefined ? normalizeAngle(rawSep) : undefined;
+  const shldrVal = rawShldr !== undefined ? normalizeAngle(rawShldr) : undefined;
+  const hipVal = rawHip !== undefined ? normalizeAngle(rawHip) : undefined;
+
+  // 3. Check Status against new Djokovic Ranges
   const isSepGood = checkRange(sepVal, IDEAL_RANGES.engine.separation);
   const isShldrGood = checkRange(shldrVal, IDEAL_RANGES.engine.shoulder_rot);
   const isHipGood = checkRange(hipVal, IDEAL_RANGES.engine.hip_rot);
 
+  // Checks if we have data to determine card color
   const engineStatusClass = (!isProcessing && engineData.max_shoulder_rotation)
     ? getCardStatusClass([isSepGood, isShldrGood, isHipGood])
     : "";
@@ -225,7 +240,7 @@ export default function HomePage() {
           
           {/* CARD: PHASES */}
           <div className="md:row-start-3">
-            <CalculationCard title="Phases" description="Swing Breakdown">
+            <CalculationCard title="Phases" description="Swing Breakdown"  className="h-full">
               <AnalysisState loading={isProcessing} data={analysis.phases}>
                 <div className="space-y-1">
                   {analysis.phases &&
@@ -242,7 +257,7 @@ export default function HomePage() {
             <CalculationCard 
               title="Engine" 
               description="Rotational Power"
-              className={engineStatusClass}
+              className={`h-full ${engineStatusClass}`}
             >
               <AnalysisState loading={isProcessing} data={analysis.engine}>
                 <div className="space-y-4">
@@ -308,7 +323,7 @@ export default function HomePage() {
             <CalculationCard 
               title="Transmission" 
               description="Rhythm & Tempo"
-              className={tempoStatusClass}
+              className={`h-full ${tempoStatusClass}`}
             >
               <AnalysisState loading={isProcessing} data={analysis.tempo || analysis.transmission}>
                 <div className="space-y-2">
@@ -369,7 +384,7 @@ export default function HomePage() {
 
           {/* CARD: DRIVER */}
           <div className="md:row-start-3">
-            <CalculationCard title="Driver" description="Key Velocities">
+            <CalculationCard title="Driver" description="Key Velocities" className="h-full">
               <AnalysisState loading={isProcessing} data={analysis.phases?.contact || analysis.driver}>
                 {analysis.phases?.contact ? (
                   <div className="space-y-2">
@@ -397,6 +412,65 @@ export default function HomePage() {
               </AnalysisState>
             </CalculationCard>
           </div>
+
+          {/* CARD: SCORE */}
+          <div className="md:row-start-4 md:col-span-4">
+            <CalculationCard title="Overall Score" description="Swing Quality, with each metric scored out of 100">
+              <AnalysisState loading={isProcessing} data={displayVideo?.score}>
+                <div className="flex flex-col items-center justify-center py-6">
+                  
+                  {/* 1. Main Total Score */}
+                  <div className="text-center mb-8">
+                    <div className="text-6xl font-extrabold text-primary tracking-tighter">
+                      {displayVideo?.score?.total ?? "N/A"}
+                    </div>
+                    <div className="text-sm font-medium text-muted-foreground uppercase tracking-widest mt-2">
+                      Total Score / 100
+                    </div>
+                  </div>
+
+                  {/* 2. Breakdown Grid */}
+                  {displayVideo?.score && typeof displayVideo.score === 'object' && (
+                    <div className="w-full max-w-2xl grid grid-cols-2 md:grid-cols-4 gap-4 px-4">
+                      
+                      <div className="flex flex-col items-center p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Separation</span>
+                        <span className="text-xl font-bold">{Math.round(displayVideo.score.separation)}</span>
+                      </div>
+
+                      <div className="flex flex-col items-center p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Shoulder Rot</span>
+                        <span className="text-xl font-bold">{Math.round(displayVideo.score.shoulderRotation)}</span>
+                      </div>
+
+                      <div className="flex flex-col items-center p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Hip Rot</span>
+                        <span className="text-xl font-bold">{Math.round(displayVideo.score.hipRotation)}</span>
+                      </div>
+
+                      <div className="flex flex-col items-center p-3 rounded-lg bg-muted/30 border border-border/50">
+                        <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold mb-1">Tempo</span>
+                        <span className="text-xl font-bold">{Math.round(displayVideo.score.tempo)}</span>
+                      </div>
+
+                    </div>
+                  )}
+                </div>
+              </AnalysisState>
+            </CalculationCard>
+          </div>
+
+          {/* LEADERBOARDS */}
+
+          {/* 1: 5 Best Personal Scores; should provide the name of the video and the score */}
+          <div className="md:row-start-5 md:col-span-2">
+
+          </div>
+          {/* 2: 5 Best Scores Across All Users; should provide the first name of the user and the score */}
+          <div className="md:row-start-5 md:col-span-2">
+
+          </div>
+
         </div>
       </SignedIn>
 

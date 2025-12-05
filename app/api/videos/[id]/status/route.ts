@@ -4,6 +4,7 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { ObjectId } from "mongodb";
 import { NextResponse } from "next/server";
+import { calculateSwingScore } from "@/lib/scoring";
 
 type Props = {
   params: Promise<{ id: string }>;
@@ -41,7 +42,7 @@ export async function GET(req: Request, { params }: Props) {
       }
     }
 
-    // 4. Return the video data WITH the playable URL
+    // 5. Return the video data WITH the playable URL
     return NextResponse.json({
       ...video,
       url: signedUrl, 
