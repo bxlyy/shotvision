@@ -9,6 +9,7 @@ import {
   RotateCw,
   Timer,
   TrendingUp,
+  Loader2,
 } from "lucide-react";
 import { VideoCatalogSelector, type Video } from "@/components/video-catalog";
 import { RoundedVideo } from "@/components/video-player";
@@ -21,19 +22,54 @@ import Link from "next/link";
 import { SignedIn, SignedOut, UserButton } from "@clerk/nextjs";
 import { useVideoStatus } from "@/hooks/use-video-status";
 
+// --- Helper Component for State Management ---
+// Now accepts a boolean 'loading' prop for cleaner logic control
+const AnalysisState = ({ 
+  loading, 
+  data, 
+  children 
+}: { 
+  loading: boolean; 
+  data: any; 
+  children: React.ReactNode 
+}) => {
+  
+  // 1. Loading State (Generating Inferences)
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center py-8 text-muted-foreground/80 gap-3">
+        <Loader2 className="h-6 w-6 animate-spin text-primary" />
+        <span className="text-xs font-medium animate-pulse">Generating Inferences...</span>
+      </div>
+    );
+  }
+
+  // 2. Unavailable State (Processing done, but specific data attribute is missing)
+  const isEmptyObject = typeof data === 'object' && data !== null && Object.keys(data).length === 0;
+  
+  if (!data || isEmptyObject) {
+    return (
+      <div className="flex h-full items-center justify-center py-8">
+        <span className="text-sm font-medium text-muted-foreground/50 italic">
+          Unavailable
+        </span>
+      </div>
+    );
+  }
+
+  // 3. Available State
+  return <>{children}</>;
+};
+
 export default function HomePage() {
   const [activeVideo, setActiveVideo] = useState<Video | null>(null);
 
   // Poll for updates
-  // The API now returns a valid 'url' property, not just keys!
-  const { data: freshData, isComplete } = useVideoStatus(activeVideo?._id ?? null);
-
-  // Compute the Display Video (THE FIX IS HERE)
-  // Check if we have fresh data AND if that data matches the current video ID.
-  // If IDs don't match, it means the hook is still holding old data, so ignore it.
-  const isDataForCurrentVideo = freshData && freshData._id === activeVideo?._id;
+  const { data: freshData } = useVideoStatus(activeVideo?._id ?? null);
 
   // Compute the Display Video
+  const isDataForCurrentVideo = freshData && freshData._id === activeVideo?._id;
+
   // We prioritize freshData (from DB) over activeVideo (from local state/upload)
   const displayVideo = activeVideo
     ? (isDataForCurrentVideo ? { ...activeVideo, ...freshData } : activeVideo)
@@ -42,6 +78,11 @@ export default function HomePage() {
 
   // 4. Extract analysis safely
   const analysis = displayVideo?.analysis || {};
+  
+  // LOGIC FIX:
+  // If we have an active video, and status is NOT 'completed' (i.e. undefined), 
+  // we consider it to be processing.
+  const isProcessing = !!activeVideo && displayVideo?.status !== 'completed';
 
   const handleVideoChange = (video: Video | null) => {
     setActiveVideo(video);
@@ -102,59 +143,60 @@ export default function HomePage() {
           />
 
           {/* 4. Data Cards */}
+          
           {/* CARD: PHASES */}
           <div className="md:row-start-3">
             <CalculationCard title="Phases" description="Swing Breakdown">
-               {analysis.phases ? (
-                 <div className="space-y-1">
-                   {Object.entries(analysis.phases).map(([key, data]: any) => (
-                     <PhaseItem key={key} name={key} data={data} />
-                   ))}
-                 </div>
-               ) : <p className="text-sm text-muted-foreground italic">Waiting for data...</p>}
+              <AnalysisState loading={isProcessing} data={analysis.phases}>
+                <div className="space-y-1">
+                  {analysis.phases && Object.entries(analysis.phases).map(([key, data]: any) => (
+                    <PhaseItem key={key} name={key} data={data} />
+                  ))}
+                </div>
+              </AnalysisState>
             </CalculationCard>
           </div>
 
           {/* CARD: ENGINE */}
           <div className="md:row-start-3">
             <CalculationCard title="Engine" description="Rotational Power">
-               {analysis.engine ? (
-                 <div className="space-y-4">
-                    {/* Highlight Metric: Separation (X-Factor) */}
-                    <div className="rounded-lg bg-primary/5 p-3 text-center border border-primary/10">
-                      <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Hip-Shldr Separation</span>
-                      <div className="text-2xl font-bold text-primary my-1">
-                        {analysis.engine.hip_shoulder_separation?.max_value?.toFixed(1)}°
-                      </div>
-                      <span className="text-xs text-muted-foreground">
-                        at {analysis.engine.hip_shoulder_separation?.timestamp}s
-                      </span>
-                    </div>
+              <AnalysisState loading={isProcessing} data={analysis.engine}>
+                <div className="space-y-4">
+                   {/* Highlight Metric: Separation (X-Factor) */}
+                   <div className="rounded-lg bg-primary/5 p-3 text-center border border-primary/10">
+                     <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">Hip-Shldr Separation</span>
+                     <div className="text-2xl font-bold text-primary my-1">
+                       {analysis.engine?.hip_shoulder_separation?.max_value?.toFixed(1)}°
+                     </div>
+                     <span className="text-xs text-muted-foreground">
+                       at {analysis.engine?.hip_shoulder_separation?.timestamp}s
+                     </span>
+                   </div>
 
-                    <div className="space-y-1">
-                      <StatRow 
-                        label="Shoulder Rot" 
-                        value={analysis.engine.max_shoulder_rotation?.value} 
-                        unit="°" 
-                        icon={RotateCw}
-                      />
-                      <StatRow 
-                        label="Hip Rot" 
-                        value={analysis.engine.max_hip_rotation?.value} 
-                        unit="°"
-                        icon={RotateCw} 
-                      />
-                    </div>
-                 </div>
-               ) : <p className="text-sm text-muted-foreground italic">Waiting for data...</p>}
+                   <div className="space-y-1">
+                     <StatRow 
+                       label="Shoulder Rot" 
+                       value={analysis.engine?.max_shoulder_rotation?.value} 
+                       unit="°" 
+                       icon={RotateCw}
+                     />
+                     <StatRow 
+                       label="Hip Rot" 
+                       value={analysis.engine?.max_hip_rotation?.value} 
+                       unit="°"
+                       icon={RotateCw} 
+                     />
+                   </div>
+                </div>
+              </AnalysisState>
             </CalculationCard>
           </div>
 
           {/* CARD: TRANSMISSION (Mapped to Tempo) */}
           <div className="md:row-start-3">
             <CalculationCard title="Transmission" description="Rhythm & Tempo">
-               {(analysis.tempo || analysis.transmission) ? (
-                 // Fallback to use .tempo if .transmission is missing in the JSON
+               {/* Check for either tempo or transmission data */}
+               <AnalysisState loading={isProcessing} data={analysis.tempo || analysis.transmission}>
                  <div className="space-y-2">
                    <div className="flex items-center justify-center p-4">
                       <div className="text-center">
@@ -167,69 +209,51 @@ export default function HomePage() {
                    
                    <div className="space-y-1 bg-muted/30 rounded p-2">
                      <StatRow 
-                        label="Backswing Time" 
-                        value={analysis.tempo?.backswing_duration} 
-                        unit="s"
-                        icon={Timer} 
-                      />
-                      <StatRow 
-                        label="Fwd Swing Time" 
-                        value={analysis.tempo?.forward_swing_duration} 
-                        unit="s"
-                        icon={Zap} 
-                      />
+                       label="Backswing Time" 
+                       value={analysis.tempo?.backswing_duration} 
+                       unit="s"
+                       icon={Timer} 
+                     />
+                     <StatRow 
+                       label="Fwd Swing Time" 
+                       value={analysis.tempo?.forward_swing_duration} 
+                       unit="s"
+                       icon={Zap} 
+                     />
                    </div>
                  </div>
-               ) : <p className="text-sm text-muted-foreground italic">Processing...</p>}
+               </AnalysisState>
             </CalculationCard>
           </div>
 
           {/* CARD: DRIVER */}
           <div className="md:row-start-3">
             <CalculationCard title="Driver" description="Key Velocities">
-              {/* Using phases.contact data as a proxy for Driver stats if specific driver object is missing */}
-              {analysis.phases?.contact ? (
-                <div className="space-y-2">
-                  <StatRow 
-                    label="Wrist Velocity" 
-                    value={analysis.phases.contact.wrist_velocity} 
-                    unit="m/s" // Assuming unit
-                    icon={TrendingUp}
-                  />
-                  <StatRow 
-                    label="Elbow Angle" 
-                    value={analysis.phases.contact.elbow_angle} 
-                    unit="°"
-                    icon={Target}
-                  />
-                  <div className="mt-4 pt-2 border-t border-border text-xs text-muted-foreground">
-                    Velocity measured at impact frame {analysis.phases.contact.frame}.
+              {/* Pass the primary data source (phases.contact) or secondary (driver) to the checker */}
+              <AnalysisState loading={isProcessing} data={analysis.phases?.contact || analysis.driver}>
+                {analysis.phases?.contact ? (
+                  <div className="space-y-2">
+                    <StatRow 
+                      label="Wrist Velocity" 
+                      value={analysis.phases.contact.wrist_velocity} 
+                      unit="m/s" 
+                      icon={TrendingUp}
+                    />
+                    <StatRow 
+                      label="Elbow Angle" 
+                      value={analysis.phases.contact.elbow_angle} 
+                      unit="°"
+                      icon={Target}
+                    />
+                    <div className="mt-4 pt-2 border-t border-border text-xs text-muted-foreground">
+                      Velocity measured at impact frame {analysis.phases.contact.frame}.
+                    </div>
                   </div>
-                </div>
-              ) : (
-                analysis.driver ? (
+                ) : (
+                  // Fallback if driver data exists but not phase.contact
                   <pre className="text-xs overflow-auto">{JSON.stringify(analysis.driver, null, 2)}</pre>
-                ) : <p className="text-sm text-muted-foreground italic">Processing...</p>
-              )}
-            </CalculationCard>
-          </div>
-
-          {/* 5. Summary Card */}
-          <div className="md:col-span-4">
-            <CalculationCard title="Overall" description="Swing Summary">
-               {displayVideo?.status === 'processing' || displayVideo?.status === 'queued' ? (
-                 <div className="flex items-center gap-2 text-yellow-600">
-                    <Activity className="animate-pulse h-4 w-4" />
-                    <span>AI is analyzing your swing...</span>
-                 </div>
-               ) : (
-                 <div className="prose prose-sm dark:prose-invert max-w-none">
-                   <p className="text-pretty">
-                    {analysis.overallSummary || 
-                     "dsjflkdsjf"}
-                   </p>
-                 </div>
-               )}
+                )}
+              </AnalysisState>
             </CalculationCard>
           </div>
         </div>
