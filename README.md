@@ -17,7 +17,7 @@ npm install
 
 This initializes the modules needed to run the Next.js application.
 
-Next, you must have a necessary `.env` file. Create a `.env` file in the root directory. Please contact (bryanly@g.ucla.edu) for the contents, or see the Google Doc linked in our submission.
+Next, you must have a necessary `.env` file. Create a `.env` file in the root directory. Add the variables contained in this document: [.env variables](https://docs.google.com/document/d/1EEhCrxg5U8kV-6IXnu2_qylEWbUcVoZ1nh65zVFH-VE/edit?usp=sharing).
 
 Next, run
 
