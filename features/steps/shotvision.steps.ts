@@ -37,20 +37,20 @@ async function generateClerkTicket() {
 Given(
   "I navigate to the ShotVision login page",
   async function (this: CustomWorld) {
-    // Even if we use tickets, sometimes it's good to start fresh
-    await this.page.goto("http://localhost:3000/login");
+    // I want to ensure the page loads fully before I do anything.
+    await expect(this.page.goto("http://localhost:3000/login")).resolves.not.toThrow();
+    // Add a small timeout to make sure the page is fully loaded
+    await this.page.waitForTimeout(3000);
   }
 );
 
 Given("I sign in as a valid user", async function (this: CustomWorld) {
-  // 1. Generate a FRESH ticket dynamically
   const ticket = await generateClerkTicket();
-
-  // 2. Use it immediately
   await this.page.goto(`http://localhost:3000/login?__clerk_ticket=${ticket}`);
 
-  // 3. Verify login
-  await expect(this.page.locator('input[type="file"]')).toBeVisible({
+  // Wait for the specific "Upload your tennis video" text from VideoUpload component
+  // to verify we are actually inside the dashboard.
+  await expect(this.page.getByText("Upload your tennis video")).toBeVisible({
     timeout: 15000,
   });
 });
@@ -58,14 +58,14 @@ Given("I sign in as a valid user", async function (this: CustomWorld) {
 Given(
   "I sign in as a user with existing videos",
   async function (this: CustomWorld) {
-    // 1. Generate ANOTHER fresh ticket for this specific scenario
+    // Same logic as standard sign in, but for the second test case.
     const ticket = await generateClerkTicket();
-
     await this.page.goto(
       `http://localhost:3000/login?__clerk_ticket=${ticket}`
     );
 
-    await expect(this.page.locator('input[type="file"]')).toBeVisible({
+    // Ensure dashboard loaded
+    await expect(this.page.getByText("Upload your tennis video")).toBeVisible({
       timeout: 15000,
     });
   }
@@ -74,18 +74,32 @@ Given(
 When(
   "I upload the video {string}",
   async function (this: CustomWorld, fileName: string) {
+    // The input is hidden in VideoUpload, but Playwright can handle it.
     const fileInput = this.page.locator('input[type="file"]');
-    await expect(fileInput).toBeAttached();
     await fileInput.setInputFiles(`./test-assets/${fileName}`);
 
-    await this.page.click('button:has-text("Upload Video")');
+    // 2. Click the Upload button
+    // In UI, button text changes from "Choose video" to "Upload Video" after a file is selected.
+    const uploadButton = this.page.getByRole('button', { name: "Upload Video" });
+    await expect(uploadButton).toBeVisible();
+    await uploadButton.click();
   }
 );
 
 When(
   "I wait {int} seconds for the inference to process",
+  { timeout: 130 * 1000 },
   async function (this: CustomWorld, seconds: number) {
-    await expect(this.page.locator(".inference-score")).toBeVisible({
+    // We wait for the Score Card to populate, and if it doesn't in that time, we fail.
+    // Based on page.tsx, the score displays "Total Score / 100".
+    
+    // 1. Ensure the loading spinner is gone first
+    await expect(this.page.locator('.lucide-loader-2')).not.toBeVisible({
+        timeout: seconds * 1000
+    });
+
+    // 2. Wait for the result to appear
+    await expect(this.page.getByText("Total Score / 100")).toBeVisible({
       timeout: seconds * 1000,
     });
   }
@@ -94,27 +108,53 @@ When(
 Then(
   "I should see the {string} on the dashboard",
   async function (this: CustomWorld, text: string) {
-    await expect(this.page.locator(`text=${text}`)).toBeVisible();
+    await expect(this.page.getByText(text)).toBeVisible({
+      timeout: 5000,
+    });
   }
 );
 
 When(
   "I click on the first video in the catalog",
+  { timeout: 20 * 1000 },
   async function (this: CustomWorld) {
-    await this.page.click(".video-card:first-child");
+    // Open the Catalog
+    await this.page.getByText("Or, view videos from your catalog").click();
+
+    // Wait for the Modal Title
+    await expect(this.page.getByText("Video Catalog")).toBeVisible();
+
+    // C. Click the specific filename
+    await this.page.getByText("test-swing.mp4", { exact: false }).first().click();
   }
 );
 
 When("I click the delete button", async function (this: CustomWorld) {
-  this.page.once("dialog", (dialog) => dialog.accept());
-  await this.page.click('button[aria-label="delete"]');
+  
+  // 1. Click "Edit" in the "Currently Viewing" card
+  await this.page.getByRole('button', { name: "Edit" }).click();
+
+  // 2. Wait for Edit Modal
+  await expect(this.page.getByText("Edit Video Details")).toBeVisible();
+
+  // 3. Click "Delete Video" (Transition to confirmation view)
+  await this.page.getByRole('button', { name: "Delete Video" }).click();
+
+  // 4. Confirm "Yes, Delete Video"
+  await expect(this.page.getByRole('button', { name: "Yes, Delete Video" })).toBeVisible();
+  await this.page.getByRole('button', { name: "Yes, Delete Video" }).click();
+  
+  // 5. Wait for the deletion request to finish (Loader disappears)
+  await expect(this.page.locator('.animate-spin')).not.toBeVisible();
 });
 
 Then(
   "the video should be removed from the catalog",
   async function (this: CustomWorld) {
-    await expect(
-      this.page.locator(".video-card:first-child")
-    ).not.toBeVisible();
+    // 1. Re-open the catalog to trigger the fetch
+    await this.page.getByText("Or, view videos from your catalog").click();
+
+    // 2. Wait for the empty state text
+    await expect(this.page.getByText("No videos found in your library.")).toBeVisible();
   }
 );
